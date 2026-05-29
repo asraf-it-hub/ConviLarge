@@ -1,0 +1,12 @@
+node_modules/
+.npm-cache/
+dist/
+.env
+.DS_Store
+*.log
+server/uploads/*
+server/temp/*
+server/processed/*
+!server/uploads/.gitkeep
+!server/temp/.gitkeep
+!server/processed/.gitkeep
