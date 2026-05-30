@@ -33,23 +33,26 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="grid gap-3 rounded-lg bg-white/85 p-4 shadow-soft ring-1 ring-slate-200 backdrop-blur dark:bg-slate-900/85 dark:ring-slate-800">
-          {popular.map((id, index) => {
-            const tool = toolCatalog.find((item) => item.id === id);
-            const Icon = tool.icon;
-            return (
-              <Link key={id} to={`/${tool.category}?tool=${id}`} className="flex items-center gap-3 rounded-lg p-3 transition hover:bg-slate-50 dark:hover:bg-slate-800">
-                <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-100">
-                  <Icon size={20} />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="font-bold text-slate-950 dark:text-white">{tool.title}</p>
-                  <p className="text-sm text-slate-500">Queue-ready processing and 24-hour cleanup</p>
-                </div>
-                <span className="text-sm font-bold text-slate-300">0{index + 1}</span>
-              </Link>
-            );
-          })}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-lg bg-slate-950 shadow-soft ring-1 ring-slate-800">
+          <img src="/brand/convilarge-hero.webp" alt="ConviLarge file conversion symbol" className="aspect-[16/9] w-full object-cover" />
+          <div className="grid gap-2 bg-white/95 p-4 dark:bg-slate-900/95">
+            {popular.slice(0, 4).map((id, index) => {
+              const tool = toolCatalog.find((item) => item.id === id);
+              const Icon = tool.icon;
+              return (
+                <Link key={id} to={`/${tool.category}?tool=${id}`} className="flex items-center gap-3 rounded-lg p-3 transition hover:bg-slate-50 dark:hover:bg-slate-800">
+                  <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-100">
+                    <Icon size={20} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-slate-950 dark:text-white">{tool.title}</p>
+                    <p className="text-sm text-slate-500">Queue-ready processing and 24-hour cleanup</p>
+                  </div>
+                  <span className="text-sm font-bold text-slate-300">0{index + 1}</span>
+                </Link>
+              );
+            })}
+          </div>
         </motion.div>
       </section>
 

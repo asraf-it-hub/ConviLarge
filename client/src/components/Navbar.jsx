@@ -42,7 +42,11 @@ export default function Navbar() {
     <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-mist/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/75">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Link to="/" className="flex items-center gap-3">
-          <span className="grid h-9 w-9 place-items-center rounded-lg bg-brand-500 text-sm font-black text-white">CL</span>
+          <img
+            src="/brand/convilarge-icon.webp"
+            alt="ConviLarge"
+            className="h-9 w-9 rounded-lg object-cover shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
+          />
           <span className="text-lg font-black text-slate-950 dark:text-white">ConviLarge</span>
         </Link>
         <nav className="hidden items-center gap-1 lg:flex">{nav}</nav>
