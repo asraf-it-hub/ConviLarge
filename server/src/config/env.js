@@ -15,6 +15,7 @@ export const env = {
   nodeEnv: process.env.NODE_ENV || "development",
   jwtSecret: process.env.JWT_SECRET || "dev-secret-change-me",
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "7d",
+  adminEmail: (process.env.ADMIN_EMAIL || "").toLowerCase().trim(),
   mongodbUri: process.env.MONGODB_URI || "",
   redisUrl: process.env.REDIS_URL || "",
   maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB || 250),

@@ -5,6 +5,7 @@ import rateLimit from "express-rate-limit";
 import mongoSanitize from "express-mongo-sanitize";
 import morgan from "morgan";
 import { env } from "./config/env.js";
+import { adminRoutes } from "./routes/adminRoutes.js";
 import { authRoutes } from "./routes/authRoutes.js";
 import { toolRoutes } from "./routes/toolRoutes.js";
 import { errorHandler, notFound } from "./middleware/error.js";
@@ -21,6 +22,7 @@ export function createApp() {
   app.use(morgan(env.nodeEnv === "production" ? "combined" : "dev"));
 
   app.use("/api/auth", authRoutes);
+  app.use("/api/admin", adminRoutes);
   app.use("/api", toolRoutes);
 
   app.use(notFound);

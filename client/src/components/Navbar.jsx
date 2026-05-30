@@ -56,6 +56,11 @@ export default function Navbar() {
           </Button>
           {user ? (
             <>
+              {user.role === "admin" && (
+                <Link to="/admin">
+                  <Button variant="soft">Admin</Button>
+                </Link>
+              )}
               <Link to="/dashboard">
                 <Button variant="soft">Dashboard</Button>
               </Link>
@@ -80,7 +85,14 @@ export default function Navbar() {
               Theme
             </Button>
             {user ? (
-              <Button onClick={logout} className="flex-1">Logout</Button>
+              <>
+                {user.role === "admin" && (
+                  <Link to="/admin" className="flex-1">
+                    <Button variant="soft" className="w-full">Admin</Button>
+                  </Link>
+                )}
+                <Button onClick={logout} className="flex-1">Logout</Button>
+              </>
             ) : (
               <Link to="/auth" className="flex-1">
                 <Button className="w-full">Login</Button>

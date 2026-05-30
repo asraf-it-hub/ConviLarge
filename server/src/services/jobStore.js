@@ -16,7 +16,7 @@ function serialize(job) {
 
 export async function createJobRecord(data) {
   const payload = { ...data, expiresAt: expiryDate() };
-  if (dbState.connected && data.user) {
+  if (dbState.connected) {
     const job = await ConversionJob.create(payload);
     return serialize(job);
   }

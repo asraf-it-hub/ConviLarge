@@ -13,7 +13,7 @@ export async function optionalAuth(req, _res, next) {
     if (dbState.connected) {
       req.user = await User.findById(payload.id).select("-password");
     } else {
-      req.user = { _id: payload.id, email: payload.email, name: payload.name };
+      req.user = { _id: payload.id, email: payload.email, name: payload.name, role: payload.role || "user" };
     }
   } catch {
     req.user = null;
@@ -28,9 +28,14 @@ export async function requireAuth(req, res, next) {
   return next();
 }
 
+export function requireAdmin(req, res, next) {
+  if (req.user?.role !== "admin") return res.status(403).json({ message: "Admin access required" });
+  return next();
+}
+
 export function signToken(user) {
   return jwt.sign(
-    { id: user._id?.toString?.() || user.id, email: user.email, name: user.name },
+    { id: user._id?.toString?.() || user.id, email: user.email, name: user.name, role: user.role || "user" },
     env.jwtSecret,
     { expiresIn: env.jwtExpiresIn }
   );
