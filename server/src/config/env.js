@@ -20,7 +20,8 @@ export const env = {
   redisUrl: process.env.REDIS_URL || "",
   maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB || 250),
   fileTtlHours: Number(process.env.FILE_TTL_HOURS || 24),
-  qpdfPath: process.env.QPDF_PATH || "qpdf"
+  qpdfPath: process.env.QPDF_PATH || "qpdf",
+  removeBgApiKey: process.env.REMOVEBG_API_KEY || ""
 };
 
 export const paths = {

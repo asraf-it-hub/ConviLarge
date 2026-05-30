@@ -10,6 +10,8 @@ const links = [
   ["Convert", "/convert"],
   ["Merge", "/merge"],
   ["Compress", "/compress"],
+  ["Image", "/image"],
+  ["PDF", "/pdf"],
   ["Split", "/split"],
   ["Security", "/security"]
 ];

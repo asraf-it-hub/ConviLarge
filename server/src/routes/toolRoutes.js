@@ -15,6 +15,6 @@ toolRoutes.get("/jobs/:id/download", optionalAuth, asyncHandler(downloadJob));
 toolRoutes.get("/dashboard", requireAuth, asyncHandler(dashboard));
 toolRoutes.post("/maintenance/cleanup", asyncHandler(runCleanup));
 
-for (const endpoint of ["convert", "merge", "compress", "split", "security"]) {
+for (const endpoint of ["convert", "merge", "compress", "split", "security", "image", "pdf"]) {
   toolRoutes.post(`/${endpoint}`, optionalAuth, upload.array("files", 50), validateUpload, asyncHandler(createToolJob));
 }

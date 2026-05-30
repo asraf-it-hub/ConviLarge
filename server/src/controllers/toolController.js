@@ -26,7 +26,25 @@ export async function createToolJob(req, res) {
   const options = {
     level: req.body.level,
     pageRange: req.body.pageRange,
-    password: req.body.password
+    password: req.body.password,
+    width: req.body.width,
+    height: req.body.height,
+    keepAspect: req.body.keepAspect,
+    cropX: req.body.cropX,
+    cropY: req.body.cropY,
+    cropWidth: req.body.cropWidth,
+    cropHeight: req.body.cropHeight,
+    angle: req.body.angle,
+    watermarkText: req.body.watermarkText,
+    watermarkPreset: req.body.watermarkPreset,
+    watermarkTextOpacity: req.body.watermarkTextOpacity,
+    watermarkTextRotation: req.body.watermarkTextRotation,
+    watermarkTextColor: req.body.watermarkTextColor,
+    watermarkImagePosition: req.body.watermarkImagePosition,
+    watermarkImageOpacity: req.body.watermarkImageOpacity,
+    watermarkImageScale: req.body.watermarkImageScale,
+    watermarkImageRotation: req.body.watermarkImageRotation,
+    watermarkLogoText: req.body.watermarkLogoText
   };
 
   const job = await runToolJob({

@@ -113,6 +113,80 @@ export const tools = {
     extensions: [".docx"],
     output: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   },
+  "resize-image": {
+    title: "Resize Image",
+    category: "image",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: ["image/jpeg", "image/png", "image/webp"],
+    output: "image/png"
+  },
+  "crop-image": {
+    title: "Crop Image",
+    category: "image",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: ["image/jpeg", "image/png", "image/webp"],
+    output: "image/png"
+  },
+  "heic-to-jpg": {
+    title: "HEIC to JPG",
+    category: "image",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: ["image/heic", "image/heif", "application/octet-stream"],
+    extensions: [".heic", ".heif"],
+    output: "image/jpeg"
+  },
+  "remove-background": {
+    title: "Remove Background",
+    category: "image",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: ["image/jpeg", "image/png", "image/webp"],
+    output: "image/png"
+  },
+  "rotate-pdf": {
+    title: "Rotate PDF",
+    category: "pdf",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: ["application/pdf"],
+    output: "application/pdf"
+  },
+  "remove-pdf-pages": {
+    title: "Remove PDF Pages",
+    category: "pdf",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: ["application/pdf"],
+    output: "application/pdf"
+  },
+  "extract-pdf-pages": {
+    title: "Extract PDF Pages",
+    category: "pdf",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: ["application/pdf"],
+    output: "application/pdf"
+  },
+  "watermark-pdf": {
+    title: "Add Watermark",
+    category: "pdf",
+    minFiles: 1,
+    maxFiles: 2,
+    accepts: ["application/pdf", "image/png", "image/jpeg", "image/svg+xml"],
+    extensions: [".pdf", ".png", ".jpg", ".jpeg", ".svg"],
+    output: "application/pdf"
+  },
+  "number-pdf-pages": {
+    title: "Add Page Numbers",
+    category: "pdf",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: ["application/pdf"],
+    output: "application/pdf"
+  },
   "compress-images": {
     title: "Compress Images",
     category: "compress",

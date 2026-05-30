@@ -10,7 +10,11 @@ import {
   FileVideo,
   ImageDown,
   Images,
+  ImagePlus,
+  Maximize2,
   Music,
+  PaintBucket,
+  RotateCw,
   Scissors,
   ShieldCheck,
   Shrink,
@@ -42,6 +46,16 @@ export const categoryMeta = {
     label: "Security",
     title: "Security Tools",
     summary: "Protect or unlock PDFs through a secure temporary processing flow."
+  },
+  image: {
+    label: "Image",
+    title: "Image Tools",
+    summary: "Resize, crop, compress, convert, and clean up images with practical production-ready controls."
+  },
+  pdf: {
+    label: "PDF",
+    title: "PDF Management",
+    summary: "Rotate, remove, extract, watermark, and number PDF pages without forcing users to sign in."
   }
 };
 
@@ -65,6 +79,16 @@ export const toolCatalog = [
   { id: "split-pdf", category: "split", title: "Split PDF", icon: Scissors, accept: "application/pdf", maxFiles: 1 },
   { id: "lock-pdf", category: "security", title: "Lock PDF", icon: FileLock2, accept: "application/pdf", maxFiles: 1 },
   { id: "unlock-pdf", category: "security", title: "Unlock PDF", icon: ShieldCheck, accept: "application/pdf", maxFiles: 1 }
+  ,
+  { id: "resize-image", category: "image", title: "Resize Image", icon: Maximize2, accept: "image/jpeg,image/png,image/webp", maxFiles: 1 },
+  { id: "crop-image", category: "image", title: "Crop Image", icon: Scissors, accept: "image/jpeg,image/png,image/webp", maxFiles: 1 },
+  { id: "heic-to-jpg", category: "image", title: "HEIC to JPG", icon: ImagePlus, accept: ".heic,.heif,image/heic,image/heif", maxFiles: 1 },
+  { id: "remove-background", category: "image", title: "Remove Background", icon: PaintBucket, accept: "image/jpeg,image/png,image/webp", maxFiles: 1 },
+  { id: "rotate-pdf", category: "pdf", title: "Rotate PDF", icon: RotateCw, accept: "application/pdf", maxFiles: 1 },
+  { id: "remove-pdf-pages", category: "pdf", title: "Remove PDF Pages", icon: Scissors, accept: "application/pdf", maxFiles: 1 },
+  { id: "extract-pdf-pages", category: "pdf", title: "Extract PDF Pages", icon: FileOutput, accept: "application/pdf", maxFiles: 1 },
+  { id: "watermark-pdf", category: "pdf", title: "Add Watermark", icon: PaintBucket, accept: "application/pdf,image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg", maxFiles: 2 },
+  { id: "number-pdf-pages", category: "pdf", title: "Add Page Numbers", icon: FileText, accept: "application/pdf", maxFiles: 1 }
 ];
 
 export function toolsFor(category) {

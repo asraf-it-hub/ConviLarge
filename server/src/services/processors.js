@@ -7,7 +7,7 @@ import ExcelJS from "exceljs";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
-import { PDFDocument } from "pdf-lib";
+import { degrees, PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { env } from "../config/env.js";
 import { AppError } from "../utils/errors.js";
 import { fileSnapshot, outputPath, statSize } from "../utils/fs.js";
@@ -15,6 +15,7 @@ import { fileSnapshot, outputPath, statSize } from "../utils/fs.js";
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
 const require = createRequire(import.meta.url);
 const DocxMerger = require("docx-merger");
+const heicConvert = require("heic-convert");
 
 function qualityFromLevel(level = "balanced") {
   return { low: 88, balanced: 76, high: 58 }[level] || 76;
@@ -267,6 +268,73 @@ async function compressImages(files, level) {
   return zipFiles(outputs, "compressed-images.zip");
 }
 
+function positiveInt(value, fallback = null) {
+  const number = Number(value);
+  return Number.isInteger(number) && number > 0 ? number : fallback;
+}
+
+async function resizeImage(file, options) {
+  const width = positiveInt(options.width);
+  const height = positiveInt(options.height);
+  if (!width && !height) throw new AppError("Enter a width or height to resize the image.");
+  const out = outputPath(".png");
+  await sharp(file.path)
+    .rotate()
+    .resize({ width, height, fit: options.keepAspect === "false" ? "fill" : "inside", withoutEnlargement: false })
+    .png({ compressionLevel: 9 })
+    .toFile(out);
+  return fileSnapshot(out, "resized-image.png", "image/png", await statSize(out));
+}
+
+async function cropImage(file, options) {
+  const metadata = await sharp(file.path).metadata();
+  const left = Math.max(0, Number(options.cropX || 0));
+  const top = Math.max(0, Number(options.cropY || 0));
+  const width = positiveInt(options.cropWidth);
+  const height = positiveInt(options.cropHeight);
+  if (!width || !height) throw new AppError("Enter crop width and crop height.");
+  if (left + width > metadata.width || top + height > metadata.height) {
+    throw new AppError(`Crop area must fit inside the image (${metadata.width}x${metadata.height}).`);
+  }
+  const out = outputPath(".png");
+  await sharp(file.path).rotate().extract({ left, top, width, height }).png({ compressionLevel: 9 }).toFile(out);
+  return fileSnapshot(out, "cropped-image.png", "image/png", await statSize(out));
+}
+
+async function heicToJpg(file) {
+  const inputBuffer = await fs.readFile(file.path);
+  const outputBuffer = await heicConvert({ buffer: inputBuffer, format: "JPEG", quality: 0.92 });
+  const out = outputPath(".jpg");
+  await fs.writeFile(out, Buffer.from(outputBuffer));
+  return fileSnapshot(out, `${path.parse(file.originalname).name}.jpg`, "image/jpeg", await statSize(out));
+}
+
+async function removeBackground(file) {
+  if (!env.removeBgApiKey) {
+    throw new AppError("Remove Background needs REMOVEBG_API_KEY configured on the server.", 501);
+  }
+
+  const form = new FormData();
+  const buffer = await fs.readFile(file.path);
+  form.append("image_file", new Blob([buffer], { type: file.mimetype }), file.originalname);
+  form.append("size", "auto");
+
+  const response = await fetch("https://api.remove.bg/v1.0/removebg", {
+    method: "POST",
+    headers: { "X-Api-Key": env.removeBgApiKey },
+    body: form
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new AppError(message || "Background removal failed", response.status);
+  }
+
+  const out = outputPath(".png");
+  await fs.writeFile(out, Buffer.from(await response.arrayBuffer()));
+  return fileSnapshot(out, "background-removed.png", "image/png", await statSize(out));
+}
+
 async function compressPdf(file) {
   const source = await PDFDocument.load(await fs.readFile(file.path), { ignoreEncryption: true });
   const out = outputPath(".pdf");
@@ -293,6 +361,93 @@ function parseRange(range, pageCount) {
   return [...selected].sort((a, b) => a - b);
 }
 
+function clampNumber(value, min, max, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
+function hexToRgb(hex, fallback = "#808080") {
+  const normalized = String(hex || fallback).trim().replace(/^#/, "");
+  const value = /^[0-9a-f]{6}$/i.test(normalized) ? normalized : fallback.replace(/^#/, "");
+  return rgb(
+    parseInt(value.slice(0, 2), 16) / 255,
+    parseInt(value.slice(2, 4), 16) / 255,
+    parseInt(value.slice(4, 6), 16) / 255
+  );
+}
+
+function textWatermarkPreset(name) {
+  const presets = {
+    professional: { color: "#808080", opacity: 15, rotation: 45 },
+    confidential: { color: "#c94a4a", opacity: 12, rotation: 45 },
+    brand: { color: "#808080", opacity: 10, rotation: 0 }
+  };
+  return presets[String(name || "professional").toLowerCase()] || presets.professional;
+}
+
+function rotatedOriginForCenter(centerX, centerY, boxWidth, boxHeight, angle) {
+  const radians = (angle * Math.PI) / 180;
+  const localCenterX = boxWidth / 2;
+  const localCenterY = boxHeight / 2;
+  return {
+    x: centerX - (localCenterX * Math.cos(radians) - localCenterY * Math.sin(radians)),
+    y: centerY - (localCenterX * Math.sin(radians) + localCenterY * Math.cos(radians))
+  };
+}
+
+function rotatedBounds(width, height, angle) {
+  const radians = Math.abs((angle * Math.PI) / 180);
+  return {
+    width: Math.abs(width * Math.cos(radians)) + Math.abs(height * Math.sin(radians)),
+    height: Math.abs(width * Math.sin(radians)) + Math.abs(height * Math.cos(radians))
+  };
+}
+
+function fitWatermarkText(text, font, pageWidth, pageHeight, rotation, presetName) {
+  const margin = Math.max(36, Math.min(pageWidth, pageHeight) * 0.08);
+  const availableWidth = Math.max(1, pageWidth - margin * 2);
+  const availableHeight = Math.max(1, pageHeight - margin * 2);
+  const diagonal = Math.hypot(availableWidth, availableHeight);
+  const targetWidth = diagonal * (presetName === "confidential" ? 0.68 : 0.55);
+  let size = Math.min(Math.max(28, Math.min(pageWidth, pageHeight) * 0.13), targetWidth / Math.max(font.widthOfTextAtSize(text, 1), 1));
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    const width = font.widthOfTextAtSize(text, size);
+    const height = size * 0.78;
+    const bounds = rotatedBounds(width, height, rotation);
+    if (bounds.width <= availableWidth && bounds.height <= availableHeight) return { size, width, height };
+    size *= Math.min(availableWidth / bounds.width, availableHeight / bounds.height) * 0.96;
+  }
+
+  const width = font.widthOfTextAtSize(text, size);
+  return { size, width, height: size * 0.78 };
+}
+
+function imagePlacement(position, pageWidth, pageHeight, imageWidth, imageHeight, rotation) {
+  const margin = Math.max(28, Math.min(pageWidth, pageHeight) * 0.055);
+  const bounds = rotatedBounds(imageWidth, imageHeight, rotation);
+  let centerX = pageWidth / 2;
+  let centerY = pageHeight / 2;
+
+  if (position.includes("left")) centerX = margin + bounds.width / 2;
+  if (position.includes("right")) centerX = pageWidth - margin - bounds.width / 2;
+  if (position.includes("top")) centerY = pageHeight - margin - bounds.height / 2;
+  if (position.includes("bottom")) centerY = margin + bounds.height / 2;
+
+  return rotatedOriginForCenter(centerX, centerY, imageWidth, imageHeight, rotation);
+}
+
+async function embedWatermarkImage(pdf, logoFile) {
+  if (!logoFile) return null;
+  const extension = path.extname(logoFile.originalname).toLowerCase();
+  const input = await fs.readFile(logoFile.path);
+  if (logoFile.mimetype === "image/jpeg" || [".jpg", ".jpeg"].includes(extension)) return pdf.embedJpg(input);
+  if (logoFile.mimetype === "image/png" || extension === ".png") return pdf.embedPng(input);
+  const png = await sharp(input, { density: 240 }).png().toBuffer();
+  return pdf.embedPng(png);
+}
+
 async function splitPdf(file, range) {
   const source = await PDFDocument.load(await fs.readFile(file.path), { ignoreEncryption: true });
   const selected = parseRange(range, source.getPageCount());
@@ -302,6 +457,137 @@ async function splitPdf(file, range) {
   const out = outputPath(".pdf");
   await fs.writeFile(out, await output.save({ useObjectStreams: true }));
   return fileSnapshot(out, "split-pages.pdf", "application/pdf", await statSize(out));
+}
+
+async function rotatePdf(file, options) {
+  const source = await PDFDocument.load(await fs.readFile(file.path), { ignoreEncryption: true });
+  const selected = options.pageRange ? parseRange(options.pageRange, source.getPageCount()) : source.getPageIndices();
+  const angle = Number(options.angle || 90);
+  if (![90, 180, 270].includes(angle)) throw new AppError("Rotation angle must be 90, 180, or 270 degrees.");
+  selected.forEach((pageIndex) => {
+    const page = source.getPage(pageIndex);
+    const current = page.getRotation().angle || 0;
+    page.setRotation(degrees((current + angle) % 360));
+  });
+  const out = outputPath(".pdf");
+  await fs.writeFile(out, await source.save({ useObjectStreams: true }));
+  return fileSnapshot(out, "rotated.pdf", "application/pdf", await statSize(out));
+}
+
+async function removePdfPages(file, range) {
+  const source = await PDFDocument.load(await fs.readFile(file.path), { ignoreEncryption: true });
+  const removeSet = new Set(parseRange(range, source.getPageCount()));
+  const keep = source.getPageIndices().filter((index) => !removeSet.has(index));
+  if (!keep.length) throw new AppError("At least one page must remain in the PDF.");
+  const output = await PDFDocument.create();
+  const pages = await output.copyPages(source, keep);
+  pages.forEach((page) => output.addPage(page));
+  const out = outputPath(".pdf");
+  await fs.writeFile(out, await output.save({ useObjectStreams: true }));
+  return fileSnapshot(out, "pages-removed.pdf", "application/pdf", await statSize(out));
+}
+
+async function watermarkPdf(files, options) {
+  const pdfFile = files.find((item) => item.mimetype === "application/pdf" || path.extname(item.originalname).toLowerCase() === ".pdf");
+  const logoFile = files.find((item) => item !== pdfFile);
+  const text = String(options.watermarkText || "").trim();
+  if (!pdfFile) throw new AppError("Add one PDF file to watermark.");
+  if (!text && !logoFile) throw new AppError("Enter watermark text or add a PNG, JPG, or SVG logo.");
+
+  const pdf = await PDFDocument.load(await fs.readFile(pdfFile.path), { ignoreEncryption: true });
+  const font = await pdf.embedFont(StandardFonts.HelveticaBold);
+  const logo = await embedWatermarkImage(pdf, logoFile);
+  const selectedPages = options.pageRange ? new Set(parseRange(options.pageRange, pdf.getPageCount())) : null;
+  const presetName = String(options.watermarkPreset || "professional").toLowerCase();
+  const preset = textWatermarkPreset(presetName);
+  const textOpacity = clampNumber(options.watermarkTextOpacity, 5, 100, preset.opacity) / 100;
+  const textRotation = clampNumber(options.watermarkTextRotation, -90, 90, preset.rotation);
+  const imageOpacity = clampNumber(options.watermarkImageOpacity, 5, 100, presetName === "brand" ? 10 : 15) / 100;
+  const imageScale = clampNumber(options.watermarkImageScale, 5, 60, presetName === "brand" ? 14 : 25);
+  const imageRotation = clampNumber(options.watermarkImageRotation, -180, 180, 0);
+  const imagePosition = ["center", "top-left", "top-right", "bottom-left", "bottom-right"].includes(options.watermarkImagePosition)
+    ? options.watermarkImagePosition
+    : presetName === "brand"
+      ? "bottom-right"
+      : "center";
+  const logoText = String(options.watermarkLogoText || "").trim();
+
+  pdf.getPages().forEach((page, pageIndex) => {
+    if (selectedPages && !selectedPages.has(pageIndex)) return;
+    const { width, height } = page.getSize();
+
+    if (text) {
+      const metrics = fitWatermarkText(text, font, width, height, textRotation, presetName);
+      const origin = rotatedOriginForCenter(width / 2, height / 2, metrics.width, metrics.height, textRotation);
+      page.drawText(text, {
+        x: origin.x,
+        y: origin.y,
+        size: metrics.size,
+        font,
+        color: hexToRgb(options.watermarkTextColor, preset.color),
+        opacity: textOpacity,
+        rotate: degrees(textRotation)
+      });
+    }
+
+    if (logo) {
+      const margin = Math.max(28, Math.min(width, height) * 0.055);
+      const aspect = logo.height / logo.width;
+      let imageWidth = width * (imageScale / 100);
+      let imageHeight = imageWidth * aspect;
+      const bounds = rotatedBounds(imageWidth, imageHeight, imageRotation);
+      const fitRatio = Math.min(1, (width - margin * 2) / bounds.width, (height - margin * 2) / bounds.height);
+      imageWidth *= fitRatio;
+      imageHeight *= fitRatio;
+      const origin = imagePlacement(imagePosition, width, height, imageWidth, imageHeight, imageRotation);
+      page.drawImage(logo, {
+        x: origin.x,
+        y: origin.y,
+        width: imageWidth,
+        height: imageHeight,
+        opacity: imageOpacity,
+        rotate: degrees(imageRotation)
+      });
+
+      if (logoText && imagePosition !== "center") {
+        const labelSize = Math.max(8, Math.min(12, imageWidth * 0.12));
+        const labelWidth = font.widthOfTextAtSize(logoText, labelSize);
+        const labelX = Math.min(width - margin - labelWidth, Math.max(margin, origin.x + imageWidth - labelWidth));
+        const labelY = Math.max(margin, origin.y - labelSize * 1.5);
+        page.drawText(logoText, {
+          x: labelX,
+          y: labelY,
+          size: labelSize,
+          font,
+          color: hexToRgb("#808080"),
+          opacity: Math.min(imageOpacity + 0.05, 0.35)
+        });
+      }
+    }
+  });
+  const out = outputPath(".pdf");
+  await fs.writeFile(out, await pdf.save({ useObjectStreams: true }));
+  return fileSnapshot(out, "watermarked.pdf", "application/pdf", await statSize(out));
+}
+
+async function numberPdfPages(file) {
+  const pdf = await PDFDocument.load(await fs.readFile(file.path), { ignoreEncryption: true });
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const pages = pdf.getPages();
+  pages.forEach((page, index) => {
+    const { width } = page.getSize();
+    const label = `${index + 1} / ${pages.length}`;
+    page.drawText(label, {
+      x: width / 2 - font.widthOfTextAtSize(label, 10) / 2,
+      y: 24,
+      size: 10,
+      font,
+      color: rgb(0.25, 0.28, 0.35)
+    });
+  });
+  const out = outputPath(".pdf");
+  await fs.writeFile(out, await pdf.save({ useObjectStreams: true }));
+  return fileSnapshot(out, "numbered-pages.pdf", "application/pdf", await statSize(out));
 }
 
 async function pdfToJpg(file) {
@@ -400,12 +686,30 @@ export async function processTool(toolType, files, options = {}) {
       return mergeExcel(files);
     case "merge-word":
       return mergeWord(files);
+    case "resize-image":
+      return resizeImage(files[0], options);
+    case "crop-image":
+      return cropImage(files[0], options);
+    case "heic-to-jpg":
+      return heicToJpg(files[0]);
+    case "remove-background":
+      return removeBackground(files[0]);
     case "compress-images":
       return compressImages(files, options.level);
     case "compress-pdf":
       return compressPdf(files[0]);
     case "split-pdf":
       return splitPdf(files[0], options.pageRange);
+    case "rotate-pdf":
+      return rotatePdf(files[0], options);
+    case "remove-pdf-pages":
+      return removePdfPages(files[0], options.pageRange);
+    case "extract-pdf-pages":
+      return splitPdf(files[0], options.pageRange);
+    case "watermark-pdf":
+      return watermarkPdf(files, options);
+    case "number-pdf-pages":
+      return numberPdfPages(files[0]);
     case "lock-pdf":
       return lockPdf(files[0], options.password);
     case "unlock-pdf":
