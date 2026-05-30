@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle2, Clock, Layers3, LockKeyhole, Zap } from "lucide-react";
 import { Link } from "react-router-dom";
 import Button from "../components/Button.jsx";
+import HomeToolSearch from "../components/HomeToolSearch.jsx";
 import ToolCard from "../components/ToolCard.jsx";
 import { categoryMeta, toolCatalog } from "../utils/tools.js";
 
@@ -21,7 +22,8 @@ export default function Home() {
           <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600 dark:text-slate-300">
             Convert, merge, compress, split, and secure files from a smooth SaaS interface. Guests can work instantly, while accounts keep recent job history while files are available.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <HomeToolSearch />
+          <div className="mt-6 flex flex-wrap gap-3">
             <Link to="/convert">
               <Button>
                 Start converting
@@ -40,7 +42,7 @@ export default function Home() {
               const tool = toolCatalog.find((item) => item.id === id);
               const Icon = tool.icon;
               return (
-                <Link key={id} to={`/${tool.category}?tool=${id}`} className="flex items-center gap-3 rounded-lg p-3 transition hover:bg-slate-50 dark:hover:bg-slate-800">
+                <Link key={id} to={tool.route} className="flex items-center gap-3 rounded-lg p-3 transition hover:bg-slate-50 dark:hover:bg-slate-800">
                   <span className="grid h-10 w-10 place-items-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-900/40 dark:text-brand-100">
                     <Icon size={20} />
                   </span>

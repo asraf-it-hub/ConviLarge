@@ -1,6 +1,7 @@
 import path from "path";
 import { processTool } from "./processors.js";
 import { createJobRecord, deleteJobRecord, getJobRecord, updateJobRecord } from "./jobStore.js";
+import { invalidateDashboardStats } from "./dashboardStatsService.js";
 import { fileSnapshot, removeFile } from "../utils/fs.js";
 
 function publicJob(job) {
@@ -46,6 +47,7 @@ export async function runToolJob({ toolType, files, options, user }) {
           : null
       }
     });
+    invalidateDashboardStats(user?._id || user?.id || null);
     return publicJob(completed);
   } catch (error) {
     await updateJobRecord(job.id, { status: "failed", error: error.message });

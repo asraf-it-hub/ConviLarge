@@ -26,4 +26,7 @@ const conversionJobSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+conversionJobSchema.index({ user: 1, status: 1, updatedAt: -1 });
+conversionJobSchema.index({ user: 1, status: 1, toolType: 1 });
+
 export const ConversionJob = mongoose.model("ConversionJob", conversionJobSchema);

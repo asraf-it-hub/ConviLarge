@@ -2,6 +2,7 @@ import fs from "fs";
 import { getTool, toolsByCategory, tools } from "../services/toolRegistry.js";
 import { runToolJob, readJobForDownload, publicJob, deleteJobOutput } from "../services/fileJobService.js";
 import { getJobRecord, listUserJobs } from "../services/jobStore.js";
+import { getDashboardStats } from "../services/dashboardStatsService.js";
 import { dbState } from "../config/db.js";
 import { redisState } from "../config/redis.js";
 import { AppError } from "../utils/errors.js";
@@ -78,8 +79,12 @@ export async function deleteJob(req, res) {
 }
 
 export async function dashboard(req, res) {
-  const jobs = await listUserJobs(req.user._id || req.user.id);
-  res.json({ jobs: jobs.map(publicJob) });
+  const userId = req.user._id || req.user.id;
+  const [jobs, stats] = await Promise.all([
+    listUserJobs(userId),
+    getDashboardStats(userId)
+  ]);
+  res.json({ jobs: jobs.map(publicJob), stats });
 }
 
 export async function health(_req, res) {

@@ -59,36 +59,48 @@ export const categoryMeta = {
   }
 };
 
+function tool({ id, category, name, description, keywords, ...rest }) {
+  return {
+    id,
+    name,
+    title: name,
+    description,
+    category,
+    route: `/${category}?tool=${id}`,
+    keywords,
+    ...rest
+  };
+}
+
 export const toolCatalog = [
-  { id: "jpg-to-png", category: "convert", title: "JPG to PNG", icon: FileImage, accept: "image/jpeg", maxFiles: 1 },
-  { id: "png-to-jpg", category: "convert", title: "PNG to JPG", icon: FileImage, accept: "image/png", maxFiles: 1 },
-  { id: "png-to-webp", category: "convert", title: "PNG to WEBP", icon: ImageDown, accept: "image/png", maxFiles: 1 },
-  { id: "webp-to-png", category: "convert", title: "WEBP to PNG", icon: ImageDown, accept: "image/webp", maxFiles: 1 },
-  { id: "jpg-to-pdf", category: "convert", title: "JPG to PDF", icon: FileText, accept: "image/jpeg", maxFiles: 20 },
-  { id: "pdf-to-jpg", category: "convert", title: "PDF to JPG", icon: FileOutput, accept: "application/pdf", maxFiles: 1 },
-  { id: "mp4-to-mp3", category: "convert", title: "MP4 to MP3", icon: Music, accept: "video/mp4", maxFiles: 1 },
-  { id: "merge-pdfs", category: "merge", title: "Merge PDFs", icon: FileStack, accept: "application/pdf", maxFiles: 40 },
-  { id: "images-to-pdf", category: "merge", title: "Images to PDF", icon: FileArchive, accept: "image/jpeg,image/png,image/webp", maxFiles: 40 },
-  { id: "merge-images", category: "merge", title: "Image Merge", icon: Images, accept: "image/jpeg,image/png,image/webp", maxFiles: 40 },
-  { id: "merge-audio", category: "merge", title: "Audio Merge", icon: Music, accept: "audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/aac,audio/mp4,audio/ogg", maxFiles: 20 },
-  { id: "merge-video", category: "merge", title: "Video Merge", icon: FileVideo, accept: "video/mp4,video/quicktime,video/x-msvideo,video/webm", maxFiles: 12 },
-  { id: "merge-excel", category: "merge", title: "Excel Merge", icon: Table2, accept: ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", maxFiles: 20 },
-  { id: "merge-word", category: "merge", title: "Word Merge", icon: FileType2, accept: ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document", maxFiles: 20 },
-  { id: "compress-images", category: "compress", title: "Compress Images", icon: Shrink, accept: "image/jpeg,image/png,image/webp", maxFiles: 20 },
-  { id: "compress-pdf", category: "compress", title: "Compress PDF", icon: Archive, accept: "application/pdf", maxFiles: 1 },
-  { id: "split-pdf", category: "split", title: "Split PDF", icon: Scissors, accept: "application/pdf", maxFiles: 1 },
-  { id: "lock-pdf", category: "security", title: "Lock PDF", icon: FileLock2, accept: "application/pdf", maxFiles: 1 },
-  { id: "unlock-pdf", category: "security", title: "Unlock PDF", icon: ShieldCheck, accept: "application/pdf", maxFiles: 1 }
-  ,
-  { id: "resize-image", category: "image", title: "Resize Image", icon: Maximize2, accept: "image/jpeg,image/png,image/webp", maxFiles: 1 },
-  { id: "crop-image", category: "image", title: "Crop Image", icon: Scissors, accept: "image/jpeg,image/png,image/webp", maxFiles: 1 },
-  { id: "heic-to-jpg", category: "image", title: "HEIC to JPG", icon: ImagePlus, accept: ".heic,.heif,image/heic,image/heif", maxFiles: 1 },
-  { id: "remove-background", category: "image", title: "Remove Background", icon: PaintBucket, accept: "image/jpeg,image/png,image/webp", maxFiles: 1 },
-  { id: "rotate-pdf", category: "pdf", title: "Rotate PDF", icon: RotateCw, accept: "application/pdf", maxFiles: 1 },
-  { id: "remove-pdf-pages", category: "pdf", title: "Remove PDF Pages", icon: Scissors, accept: "application/pdf", maxFiles: 1 },
-  { id: "extract-pdf-pages", category: "pdf", title: "Extract PDF Pages", icon: FileOutput, accept: "application/pdf", maxFiles: 1 },
-  { id: "watermark-pdf", category: "pdf", title: "Add Watermark", icon: PaintBucket, accept: "application/pdf,image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg", maxFiles: 2 },
-  { id: "number-pdf-pages", category: "pdf", title: "Add Page Numbers", icon: FileText, accept: "application/pdf", maxFiles: 1 }
+  tool({ id: "jpg-to-png", category: "convert", name: "JPG to PNG", description: "Convert JPG images into clean PNG files.", keywords: ["jpg", "jpeg", "png", "image", "convert"], icon: FileImage, accept: "image/jpeg", maxFiles: 1 }),
+  tool({ id: "png-to-jpg", category: "convert", name: "PNG to JPG", description: "Convert PNG images into shareable JPG files.", keywords: ["png", "jpg", "jpeg", "image", "convert"], icon: FileImage, accept: "image/png", maxFiles: 1 }),
+  tool({ id: "png-to-webp", category: "convert", name: "PNG to WEBP", description: "Create compact WEBP images from PNG files.", keywords: ["png", "webp", "image", "convert"], icon: ImageDown, accept: "image/png", maxFiles: 1 }),
+  tool({ id: "webp-to-png", category: "convert", name: "WEBP to PNG", description: "Turn WEBP images into PNG files.", keywords: ["webp", "png", "image", "convert"], icon: ImageDown, accept: "image/webp", maxFiles: 1 }),
+  tool({ id: "jpg-to-pdf", category: "convert", name: "JPG to PDF", description: "Bundle JPG images into a PDF document.", keywords: ["jpg", "jpeg", "pdf", "image", "convert"], icon: FileText, accept: "image/jpeg", maxFiles: 20 }),
+  tool({ id: "pdf-to-jpg", category: "convert", name: "PDF to JPG", description: "Export PDF pages as JPG images.", keywords: ["pdf", "jpg", "jpeg", "image", "convert"], icon: FileOutput, accept: "application/pdf", maxFiles: 1 }),
+  tool({ id: "mp4-to-mp3", category: "convert", name: "MP4 to MP3", description: "Extract MP3 audio from MP4 video files.", keywords: ["mp4", "mp3", "video", "audio", "convert", "extract"], icon: Music, accept: "video/mp4", maxFiles: 1 }),
+  tool({ id: "merge-pdfs", category: "merge", name: "PDF Merge", description: "Combine multiple PDFs into one document.", keywords: ["pdf", "merge", "combine", "join", "pdf merge", "merge pdf"], icon: FileStack, accept: "application/pdf", maxFiles: 40 }),
+  tool({ id: "images-to-pdf", category: "merge", name: "Images to PDF", description: "Merge images into a single PDF.", keywords: ["image", "images", "pdf", "jpg", "png", "webp", "merge"], icon: FileArchive, accept: "image/jpeg,image/png,image/webp", maxFiles: 40 }),
+  tool({ id: "merge-images", category: "merge", name: "Image Merge", description: "Stack images together into one image.", keywords: ["image", "images", "merge", "combine", "jpg", "png", "webp"], icon: Images, accept: "image/jpeg,image/png,image/webp", maxFiles: 40 }),
+  tool({ id: "merge-audio", category: "merge", name: "Audio Merge", description: "Join audio files into a single track.", keywords: ["audio", "mp3", "wav", "merge", "combine", "join"], icon: Music, accept: "audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/aac,audio/mp4,audio/ogg", maxFiles: 20 }),
+  tool({ id: "merge-video", category: "merge", name: "Video Merge", description: "Combine videos into one MP4 file.", keywords: ["video", "mp4", "merge", "combine", "join"], icon: FileVideo, accept: "video/mp4,video/quicktime,video/x-msvideo,video/webm", maxFiles: 12 }),
+  tool({ id: "merge-excel", category: "merge", name: "Excel Merge", description: "Merge Excel workbooks into one file.", keywords: ["excel", "xlsx", "spreadsheet", "merge", "combine"], icon: Table2, accept: ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", maxFiles: 20 }),
+  tool({ id: "merge-word", category: "merge", name: "Word Merge", description: "Merge Word documents into one DOCX.", keywords: ["word", "docx", "document", "merge", "combine"], icon: FileType2, accept: ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document", maxFiles: 20 }),
+  tool({ id: "compress-images", category: "compress", name: "Image Compress", description: "Reduce image sizes with useful quality controls.", keywords: ["image", "images", "compress", "jpg", "png", "webp", "optimize", "image compress"], icon: Shrink, accept: "image/jpeg,image/png,image/webp", maxFiles: 20 }),
+  tool({ id: "compress-pdf", category: "compress", name: "PDF Compress", description: "Compress PDFs for easier sharing.", keywords: ["pdf", "compress", "reduce", "optimize", "small"], icon: Archive, accept: "application/pdf", maxFiles: 1 }),
+  tool({ id: "split-pdf", category: "split", name: "PDF Split", description: "Split or extract pages from a PDF.", keywords: ["pdf", "split", "extract", "pages", "pdf split", "split pdf"], icon: Scissors, accept: "application/pdf", maxFiles: 1 }),
+  tool({ id: "lock-pdf", category: "security", name: "Lock PDF", description: "Protect PDFs with a password.", keywords: ["pdf", "lock", "password", "protect", "secure", "encrypt"], icon: FileLock2, accept: "application/pdf", maxFiles: 1 }),
+  tool({ id: "unlock-pdf", category: "security", name: "Unlock PDF", description: "Remove password protection from PDFs you can open.", keywords: ["pdf", "unlock", "password", "decrypt", "security"], icon: ShieldCheck, accept: "application/pdf", maxFiles: 1 }),
+  tool({ id: "resize-image", category: "image", name: "Resize Image", description: "Resize images to exact dimensions.", keywords: ["image", "resize", "dimensions", "width", "height"], icon: Maximize2, accept: "image/jpeg,image/png,image/webp", maxFiles: 1 }),
+  tool({ id: "crop-image", category: "image", name: "Crop Image", description: "Crop images by position and size.", keywords: ["image", "crop", "trim", "jpg", "png", "webp"], icon: Scissors, accept: "image/jpeg,image/png,image/webp", maxFiles: 1 }),
+  tool({ id: "heic-to-jpg", category: "image", name: "HEIC to JPG", description: "Convert HEIC photos into JPG images.", keywords: ["heic", "heif", "jpg", "jpeg", "iphone", "image", "convert"], icon: ImagePlus, accept: ".heic,.heif,image/heic,image/heif", maxFiles: 1 }),
+  tool({ id: "remove-background", category: "image", name: "Remove Background", description: "Remove an image background and export PNG.", keywords: ["image", "background", "remove", "transparent", "png"], icon: PaintBucket, accept: "image/jpeg,image/png,image/webp", maxFiles: 1 }),
+  tool({ id: "rotate-pdf", category: "pdf", name: "Rotate PDF", description: "Rotate selected PDF pages.", keywords: ["pdf", "rotate", "pages", "turn"], icon: RotateCw, accept: "application/pdf", maxFiles: 1 }),
+  tool({ id: "remove-pdf-pages", category: "pdf", name: "Remove PDF Pages", description: "Delete selected pages from a PDF.", keywords: ["pdf", "remove", "delete", "pages"], icon: Scissors, accept: "application/pdf", maxFiles: 1 }),
+  tool({ id: "extract-pdf-pages", category: "pdf", name: "Extract PDF Pages", description: "Save selected PDF pages as a new file.", keywords: ["pdf", "extract", "pages", "save", "split"], icon: FileOutput, accept: "application/pdf", maxFiles: 1 }),
+  tool({ id: "watermark-pdf", category: "pdf", name: "Add Watermark", description: "Add text or logo watermarks to PDF pages.", keywords: ["pdf", "watermark", "logo", "stamp", "text", "brand"], icon: PaintBucket, accept: "application/pdf,image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg", maxFiles: 2 }),
+  tool({ id: "number-pdf-pages", category: "pdf", name: "Add Page Numbers", description: "Add page numbers to a PDF.", keywords: ["pdf", "page numbers", "number", "pagination", "pages"], icon: FileText, accept: "application/pdf", maxFiles: 1 })
 ];
 
 export function toolsFor(category) {
