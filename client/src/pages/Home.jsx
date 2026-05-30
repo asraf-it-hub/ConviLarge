@@ -4,11 +4,14 @@ import { Link } from "react-router-dom";
 import Button from "../components/Button.jsx";
 import HomeToolSearch from "../components/HomeToolSearch.jsx";
 import ToolCard from "../components/ToolCard.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 import { categoryMeta, toolCatalog } from "../utils/tools.js";
 
 const popular = ["jpg-to-png", "compress-images", "merge-pdfs", "mp4-to-mp3", "split-pdf", "lock-pdf"];
 
 export default function Home() {
+  const { user } = useAuth();
+
   return (
     <main>
       <section className="mx-auto grid min-h-[calc(100vh-4rem)] max-w-7xl content-center gap-10 px-4 py-12 sm:px-6 lg:grid-cols-[1.05fr_.95fr] lg:px-8">
@@ -30,9 +33,15 @@ export default function Home() {
                 <ArrowRight size={18} />
               </Button>
             </Link>
-            <Link to="/auth">
-              <Button variant="soft">Create account</Button>
-            </Link>
+            {user ? (
+              <Link to="/dashboard">
+                <Button variant="soft">Dashboard</Button>
+              </Link>
+            ) : (
+              <Link to="/auth">
+                <Button variant="soft">Create account</Button>
+              </Link>
+            )}
           </div>
         </div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-lg bg-slate-950 shadow-soft ring-1 ring-slate-800">

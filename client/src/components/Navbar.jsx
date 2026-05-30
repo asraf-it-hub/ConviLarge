@@ -21,6 +21,11 @@ export default function Navbar() {
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
 
+  function handleLogout() {
+    logout();
+    setOpen(false);
+  }
+
   const nav = (
     <>
       {links.map(([label, href]) => (
@@ -66,7 +71,7 @@ export default function Navbar() {
               <Link to="/dashboard">
                 <Button variant="soft">Dashboard</Button>
               </Link>
-              <Button onClick={logout}>Logout</Button>
+              <Button onClick={handleLogout}>Logout</Button>
             </>
           ) : (
             <Link to="/auth">
@@ -81,22 +86,25 @@ export default function Navbar() {
       {open && (
         <div className="border-t border-slate-200 bg-mist px-4 py-3 dark:border-slate-800 dark:bg-slate-950 lg:hidden">
           <nav className="grid gap-1">{nav}</nav>
-          <div className="mt-3 flex gap-2">
-            <Button variant="soft" onClick={toggleTheme} className="flex-1">
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Button variant="soft" onClick={toggleTheme} className="w-full">
               {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
               Theme
             </Button>
             {user ? (
               <>
                 {user.role === "admin" && (
-                  <Link to="/admin" className="flex-1">
+                  <Link to="/admin" onClick={() => setOpen(false)}>
                     <Button variant="soft" className="w-full">Admin</Button>
                   </Link>
                 )}
-                <Button onClick={logout} className="flex-1">Logout</Button>
+                <Link to="/dashboard" onClick={() => setOpen(false)}>
+                  <Button variant="soft" className="w-full">Dashboard</Button>
+                </Link>
+                <Button onClick={handleLogout} className="w-full">Logout</Button>
               </>
             ) : (
-              <Link to="/auth" className="flex-1">
+              <Link to="/auth">
                 <Button className="w-full">Login</Button>
               </Link>
             )}
