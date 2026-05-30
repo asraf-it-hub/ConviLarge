@@ -56,6 +56,20 @@ export async function getJobRecord(id, userId = null) {
   return memoryJobs.get(id) || null;
 }
 
+export async function deleteJobRecord(id, userId = null) {
+  if (dbState.connected && !id.includes("-")) {
+    const query = { _id: id };
+    if (userId) query.user = userId;
+    const job = await ConversionJob.findOneAndDelete(query);
+    return job ? serialize(job) : null;
+  }
+
+  const job = memoryJobs.get(id);
+  if (!job) return null;
+  memoryJobs.delete(id);
+  return job;
+}
+
 export async function listUserJobs(userId) {
   if (!dbState.connected || !userId) return [];
   const jobs = await ConversionJob.find({ user: userId, expiresAt: { $gt: new Date() } })

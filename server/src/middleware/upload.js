@@ -24,6 +24,18 @@ export function validateUpload(req, _res, next) {
     return next(new AppError(`${tool.title} expects ${tool.minFiles}-${tool.maxFiles} file(s)`));
   }
 
+  if (req.body.toolType === "watermark-pdf") {
+    const pdfFiles = files.filter((file) => file.mimetype === "application/pdf" || path.extname(file.originalname).toLowerCase() === ".pdf");
+    const logoFiles = files.filter((file) => {
+      const extension = path.extname(file.originalname).toLowerCase();
+      return ["image/png", "image/jpeg", "image/svg+xml"].includes(file.mimetype) || [".png", ".jpg", ".jpeg", ".svg"].includes(extension);
+    });
+    if (pdfFiles.length !== 1 || pdfFiles.length + logoFiles.length !== files.length) {
+      return next(new AppError("Add one PDF and optionally one PNG, JPG, or SVG logo."));
+    }
+    return next();
+  }
+
   const badFile = files.find((file) => {
     const extension = path.extname(file.originalname).toLowerCase();
     return !tool.accepts.includes(file.mimetype) && !tool.extensions?.includes(extension);

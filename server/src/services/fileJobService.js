@@ -1,6 +1,6 @@
 import path from "path";
 import { processTool } from "./processors.js";
-import { createJobRecord, getJobRecord, updateJobRecord } from "./jobStore.js";
+import { createJobRecord, deleteJobRecord, getJobRecord, updateJobRecord } from "./jobStore.js";
 import { fileSnapshot, removeFile } from "../utils/fs.js";
 
 function publicJob(job) {
@@ -63,6 +63,14 @@ export async function readJobForDownload(id, user = null) {
     filePath: job.outputFile.path,
     filename: job.outputFile.originalName || path.basename(job.outputFile.path)
   };
+}
+
+export async function deleteJobOutput(id, user = null) {
+  const job = await deleteJobRecord(id, user?._id || user?.id || null);
+  if (!job) return false;
+  const files = [job.outputFile, ...(job.outputFiles || [])].filter(Boolean);
+  await Promise.all(files.map((file) => removeFile(file.path)));
+  return true;
 }
 
 export { publicJob };

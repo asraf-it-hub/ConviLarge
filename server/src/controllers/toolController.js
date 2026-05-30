@@ -1,6 +1,6 @@
 import fs from "fs";
 import { getTool, toolsByCategory, tools } from "../services/toolRegistry.js";
-import { runToolJob, readJobForDownload, publicJob } from "../services/fileJobService.js";
+import { runToolJob, readJobForDownload, publicJob, deleteJobOutput } from "../services/fileJobService.js";
 import { getJobRecord, listUserJobs } from "../services/jobStore.js";
 import { dbState } from "../config/db.js";
 import { redisState } from "../config/redis.js";
@@ -14,7 +14,9 @@ export async function listTools(_req, res) {
       merge: toolsByCategory("merge"),
       compress: toolsByCategory("compress"),
       split: toolsByCategory("split"),
-      security: toolsByCategory("security")
+      security: toolsByCategory("security"),
+      image: toolsByCategory("image"),
+      pdf: toolsByCategory("pdf")
     }
   });
 }
@@ -67,6 +69,12 @@ export async function downloadJob(req, res) {
   const result = await readJobForDownload(req.params.id, req.user);
   if (!result || !fs.existsSync(result.filePath)) throw new AppError("File is no longer available", 404);
   res.download(result.filePath, result.filename);
+}
+
+export async function deleteJob(req, res) {
+  const deleted = await deleteJobOutput(req.params.id, req.user);
+  if (!deleted) throw new AppError("File is no longer available", 404);
+  res.status(204).end();
 }
 
 export async function dashboard(req, res) {
