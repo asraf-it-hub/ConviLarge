@@ -1,7 +1,9 @@
 import fs from "fs/promises";
 import path from "path";
 import { spawn } from "child_process";
+import { createRequire } from "module";
 import archiver from "archiver";
+import ExcelJS from "exceljs";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
@@ -11,6 +13,8 @@ import { AppError } from "../utils/errors.js";
 import { fileSnapshot, outputPath, statSize } from "../utils/fs.js";
 
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
+const require = createRequire(import.meta.url);
+const DocxMerger = require("docx-merger");
 
 function qualityFromLevel(level = "balanced") {
   return { low: 88, balanced: 76, high: 58 }[level] || 76;
@@ -69,6 +73,180 @@ async function mergePdfs(files) {
   const out = outputPath(".pdf");
   await fs.writeFile(out, await merged.save({ useObjectStreams: true }));
   return fileSnapshot(out, "merged.pdf", "application/pdf", await statSize(out));
+}
+
+async function mergeImages(files) {
+  const normalized = [];
+  for (const file of files) {
+    const image = sharp(file.path).rotate();
+    const metadata = await image.metadata();
+    normalized.push({
+      input: await image.png().toBuffer(),
+      width: metadata.width || 1,
+      height: metadata.height || 1
+    });
+  }
+
+  const width = Math.max(...normalized.map((image) => image.width));
+  const height = normalized.reduce((sum, image) => sum + image.height, 0);
+  let top = 0;
+  const composite = normalized.map((image) => {
+    const layer = { input: image.input, left: Math.floor((width - image.width) / 2), top };
+    top += image.height;
+    return layer;
+  });
+
+  const out = outputPath(".png");
+  await sharp({
+    create: {
+      width,
+      height,
+      channels: 4,
+      background: "#ffffff"
+    }
+  })
+    .composite(composite)
+    .png({ compressionLevel: 9 })
+    .toFile(out);
+
+  return fileSnapshot(out, "merged-images.png", "image/png", await statSize(out));
+}
+
+function runFfmpeg(command) {
+  return new Promise((resolve, reject) => {
+    command.on("end", resolve).on("error", reject).run();
+  });
+}
+
+async function mergeAudio(files) {
+  const out = outputPath(".mp3");
+  const command = ffmpeg();
+  files.forEach((file) => command.input(file.path));
+  const inputs = files.map((_, index) => `[${index}:a:0]`).join("");
+
+  await runFfmpeg(
+    command
+      .complexFilter(`${inputs}concat=n=${files.length}:v=0:a=1[outa]`)
+      .outputOptions(["-map [outa]", "-ac 2", "-ar 44100", "-b:a 192k"])
+      .format("mp3")
+      .output(out)
+  );
+
+  return fileSnapshot(out, "merged-audio.mp3", "audio/mpeg", await statSize(out));
+}
+
+async function mergeVideo(files) {
+  const out = outputPath(".mp4");
+  const command = ffmpeg();
+  files.forEach((file) => command.input(file.path));
+  const filters = [];
+  const concatInputs = [];
+
+  files.forEach((_, index) => {
+    filters.push(`[${index}:v:0]scale=1280:-2,setsar=1,fps=30[v${index}]`);
+    filters.push(`[${index}:a:0]aresample=48000[a${index}]`);
+    concatInputs.push(`[v${index}][a${index}]`);
+  });
+
+  filters.push(`${concatInputs.join("")}concat=n=${files.length}:v=1:a=1[outv][outa]`);
+
+  await runFfmpeg(
+    command
+      .complexFilter(filters)
+      .outputOptions(["-map [outv]", "-map [outa]", "-c:v libx264", "-preset veryfast", "-crf 23", "-c:a aac", "-b:a 160k", "-movflags +faststart"])
+      .output(out)
+  );
+
+  return fileSnapshot(out, "merged-video.mp4", "video/mp4", await statSize(out));
+}
+
+function clonePlain(value) {
+  if (value === undefined || value === null) return value;
+  return JSON.parse(JSON.stringify(value));
+}
+
+function safeSheetName(name, usedNames) {
+  const base = String(name || "Sheet").replace(/[\\/*?:[\]]/g, " ").trim().slice(0, 31) || "Sheet";
+  let candidate = base;
+  let suffix = 2;
+
+  while (usedNames.has(candidate.toLowerCase())) {
+    const marker = ` (${suffix})`;
+    candidate = `${base.slice(0, 31 - marker.length)}${marker}`;
+    suffix += 1;
+  }
+
+  usedNames.add(candidate.toLowerCase());
+  return candidate;
+}
+
+function copyWorksheet(source, target) {
+  target.properties = clonePlain(source.properties) || target.properties;
+  target.pageSetup = clonePlain(source.pageSetup) || target.pageSetup;
+  target.views = clonePlain(source.views) || [];
+  target.headerFooter = clonePlain(source.headerFooter) || {};
+  target.state = source.state;
+
+  source.columns.forEach((column, index) => {
+    const targetColumn = target.getColumn(index + 1);
+    targetColumn.width = column.width;
+    targetColumn.hidden = column.hidden;
+    targetColumn.outlineLevel = column.outlineLevel;
+    targetColumn.style = clonePlain(column.style) || {};
+  });
+
+  source.eachRow({ includeEmpty: true }, (row, rowNumber) => {
+    const targetRow = target.getRow(rowNumber);
+    targetRow.height = row.height;
+    targetRow.hidden = row.hidden;
+    targetRow.outlineLevel = row.outlineLevel;
+    targetRow.style = clonePlain(row.style) || {};
+
+    row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
+      const targetCell = targetRow.getCell(columnNumber);
+      targetCell.value = clonePlain(cell.value);
+      targetCell.style = clonePlain(cell.style) || {};
+      if (cell.numFmt) targetCell.numFmt = cell.numFmt;
+      if (cell.note) targetCell.note = clonePlain(cell.note);
+    });
+    targetRow.commit();
+  });
+
+  for (const merge of source.model.merges || []) {
+    target.mergeCells(merge);
+  }
+}
+
+async function mergeExcel(files) {
+  const output = new ExcelJS.Workbook();
+  output.creator = "ConviLarge";
+  output.created = new Date();
+  output.modified = new Date();
+  const defaultSheet = output.getWorksheet(1);
+  if (defaultSheet) output.removeWorksheet(defaultSheet.id);
+  const usedNames = new Set();
+
+  for (const file of files) {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(file.path);
+    workbook.eachSheet((worksheet) => {
+      const nextSheet = output.addWorksheet(safeSheetName(worksheet.name, usedNames));
+      copyWorksheet(worksheet, nextSheet);
+    });
+  }
+
+  const out = outputPath(".xlsx");
+  await output.xlsx.writeFile(out);
+  return fileSnapshot(out, "merged-workbook.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", await statSize(out));
+}
+
+async function mergeWord(files) {
+  const buffers = await Promise.all(files.map((file) => fs.readFile(file.path)));
+  const merger = new DocxMerger({ pageBreak: true }, buffers);
+  const data = await new Promise((resolve) => merger.save("nodebuffer", resolve));
+  const out = outputPath(".docx");
+  await fs.writeFile(out, data);
+  return fileSnapshot(out, "merged-document.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", await statSize(out));
 }
 
 async function compressImages(files, level) {
@@ -212,6 +390,16 @@ export async function processTool(toolType, files, options = {}) {
       return mp4ToMp3(files[0]);
     case "merge-pdfs":
       return mergePdfs(files);
+    case "merge-images":
+      return mergeImages(files);
+    case "merge-audio":
+      return mergeAudio(files);
+    case "merge-video":
+      return mergeVideo(files);
+    case "merge-excel":
+      return mergeExcel(files);
+    case "merge-word":
+      return mergeWord(files);
     case "compress-images":
       return compressImages(files, options.level);
     case "compress-pdf":

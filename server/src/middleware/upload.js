@@ -24,7 +24,10 @@ export function validateUpload(req, _res, next) {
     return next(new AppError(`${tool.title} expects ${tool.minFiles}-${tool.maxFiles} file(s)`));
   }
 
-  const badFile = files.find((file) => !tool.accepts.includes(file.mimetype));
+  const badFile = files.find((file) => {
+    const extension = path.extname(file.originalname).toLowerCase();
+    return !tool.accepts.includes(file.mimetype) && !tool.extensions?.includes(extension);
+  });
   if (badFile) {
     return next(new AppError(`${badFile.originalname} is not a supported file type for ${tool.title}`));
   }

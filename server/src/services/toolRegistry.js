@@ -71,6 +71,48 @@ export const tools = {
     accepts: ["image/jpeg", "image/png", "image/webp"],
     output: "application/pdf"
   },
+  "merge-images": {
+    title: "Image Merge",
+    category: "merge",
+    minFiles: 2,
+    maxFiles: 40,
+    accepts: ["image/jpeg", "image/png", "image/webp"],
+    output: "image/png"
+  },
+  "merge-audio": {
+    title: "Audio Merge",
+    category: "merge",
+    minFiles: 2,
+    maxFiles: 20,
+    accepts: ["audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/aac", "audio/mp4", "audio/ogg"],
+    output: "audio/mpeg"
+  },
+  "merge-video": {
+    title: "Video Merge",
+    category: "merge",
+    minFiles: 2,
+    maxFiles: 12,
+    accepts: ["video/mp4", "video/quicktime", "video/x-msvideo", "video/webm"],
+    output: "video/mp4"
+  },
+  "merge-excel": {
+    title: "Excel Merge",
+    category: "merge",
+    minFiles: 2,
+    maxFiles: 20,
+    accepts: ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+    extensions: [".xlsx"],
+    output: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  },
+  "merge-word": {
+    title: "Word Merge",
+    category: "merge",
+    minFiles: 2,
+    maxFiles: 20,
+    accepts: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
+    extensions: [".docx"],
+    output: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+  },
   "compress-images": {
     title: "Compress Images",
     category: "compress",

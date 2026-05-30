@@ -6,11 +6,15 @@ import {
   FileOutput,
   FileStack,
   FileText,
+  FileType2,
+  FileVideo,
   ImageDown,
+  Images,
   Music,
   Scissors,
   ShieldCheck,
-  Shrink
+  Shrink,
+  Table2
 } from "lucide-react";
 
 export const categoryMeta = {
@@ -51,6 +55,11 @@ export const toolCatalog = [
   { id: "mp4-to-mp3", category: "convert", title: "MP4 to MP3", icon: Music, accept: "video/mp4", maxFiles: 1 },
   { id: "merge-pdfs", category: "merge", title: "Merge PDFs", icon: FileStack, accept: "application/pdf", maxFiles: 40 },
   { id: "images-to-pdf", category: "merge", title: "Images to PDF", icon: FileArchive, accept: "image/jpeg,image/png,image/webp", maxFiles: 40 },
+  { id: "merge-images", category: "merge", title: "Image Merge", icon: Images, accept: "image/jpeg,image/png,image/webp", maxFiles: 40 },
+  { id: "merge-audio", category: "merge", title: "Audio Merge", icon: Music, accept: "audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/aac,audio/mp4,audio/ogg", maxFiles: 20 },
+  { id: "merge-video", category: "merge", title: "Video Merge", icon: FileVideo, accept: "video/mp4,video/quicktime,video/x-msvideo,video/webm", maxFiles: 12 },
+  { id: "merge-excel", category: "merge", title: "Excel Merge", icon: Table2, accept: ".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", maxFiles: 20 },
+  { id: "merge-word", category: "merge", title: "Word Merge", icon: FileType2, accept: ".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document", maxFiles: 20 },
   { id: "compress-images", category: "compress", title: "Compress Images", icon: Shrink, accept: "image/jpeg,image/png,image/webp", maxFiles: 20 },
   { id: "compress-pdf", category: "compress", title: "Compress PDF", icon: Archive, accept: "application/pdf", maxFiles: 1 },
   { id: "split-pdf", category: "split", title: "Split PDF", icon: Scissors, accept: "application/pdf", maxFiles: 1 },
