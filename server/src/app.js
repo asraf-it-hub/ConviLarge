@@ -13,6 +13,10 @@ import { errorHandler, notFound } from "./middleware/error.js";
 export function createApp() {
   const app = express();
 
+  if (env.nodeEnv === "production") {
+    app.set("trust proxy", 1);
+  }
+
   app.use(helmet({ crossOriginResourcePolicy: { policy: "cross-origin" } }));
   app.use(cors({ origin: env.clientUrl, credentials: true }));
   app.use(rateLimit({ windowMs: 15 * 60 * 1000, limit: 160, standardHeaders: true, legacyHeaders: false }));

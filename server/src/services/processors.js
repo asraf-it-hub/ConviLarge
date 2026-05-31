@@ -314,7 +314,7 @@ async function removeBackground(file) {
   const input = outputPath(".png");
   await sharp(file.path)
     .rotate()
-    .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+    .resize({ width: 700, height: 700, fit: "inside", withoutEnlargement: true })
     .png({ compressionLevel: 6 })
     .toFile(input);
 
