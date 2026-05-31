@@ -96,8 +96,7 @@ export async function health(_req, res) {
     redisError: redisState.error,
     nativeHelpers: {
       qpdf: "required for PDF lock/unlock via QPDF_PATH",
-      pdfRendering: "required for PDF to JPG via Sharp/libvips PDF support",
-      rembg: "required for Remove Background via REMBG_COMMAND"
+      pdfRendering: "required for PDF to JPG via Sharp/libvips PDF support"
     }
   });
 }

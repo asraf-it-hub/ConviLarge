@@ -1,14 +1,6 @@
 # Tool Dependency Sources
 
-Most ConviLarge tools run with the Node dependencies already in this project. These tools need an external service or native server support before they are fully production-ready.
-
-## Remove Background
-
-- Tool id: `remove-background`
-- Required server package: `rembg`
-- Optional config: `REMBG_COMMAND`, `REMBG_MODEL`
-- Source: https://pypi.org/project/rembg/
-- Notes: Install rembg on the server with `pip install "rembg[cli]"`. The backend runs `rembg i -m u2netp input output` by default, so no user API key or third-party upload is needed.
+Most ConviLarge tools run with the Node dependencies already in this project. These tools need native server support before they are fully production-ready.
 
 ## Lock PDF and Unlock PDF
 

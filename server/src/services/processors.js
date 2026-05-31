@@ -309,54 +309,11 @@ async function heicToJpg(file) {
   return fileSnapshot(out, `${path.parse(file.originalname).name}.jpg`, "image/jpeg", await statSize(out));
 }
 
-async function removeBackground(file) {
-  const out = outputPath(".png");
-  const input = outputPath(".png");
-  await sharp(file.path)
-    .rotate()
-    .resize({ width: 700, height: 700, fit: "inside", withoutEnlargement: true })
-    .png({ compressionLevel: 6 })
-    .toFile(input);
-
-  await new Promise((resolve, reject) => {
-    const child = spawn(env.rembgCommand, ["i", "-m", env.rembgModel, input, out], { windowsHide: true });
-    let stdout = "";
-    let stderr = "";
-    const timeout = setTimeout(() => {
-      child.kill("SIGKILL");
-      reject(new AppError("Background removal took too long. Please try a smaller image.", 408));
-    }, 5 * 60 * 1000);
-
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.on("error", () => {
-      clearTimeout(timeout);
-      reject(new AppError("Remove Background is temporarily unavailable. Please try again later.", 503, {
-        source: "rembg",
-        setup: "Install rembg on the server and make sure REMBG_COMMAND points to it."
-      }));
-    });
-
-    child.on("close", (code, signal) => {
-      clearTimeout(timeout);
-      if (code === 0) resolve();
-      else {
-        console.warn("rembg failed:", { code, signal, stdout, stderr });
-        const message = signal === "SIGKILL"
-          ? "Background removal was stopped by the server. The deployment likely needs more memory."
-          : stderr || stdout || "Background removal failed. Please try another image.";
-        reject(new AppError(message, 400));
-      }
-    });
-  });
-
-  return fileSnapshot(out, "background-removed.png", "image/png", await statSize(out));
+async function removeBackground() {
+  throw new AppError(
+    "Remove Background is temporarily unavailable due to high traffic. Please try again later.",
+    503
+  );
 }
 
 async function compressPdf(file) {
