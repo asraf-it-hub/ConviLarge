@@ -312,7 +312,7 @@ async function heicToJpg(file) {
 async function removeBackground(file) {
   const out = outputPath(".png");
   await new Promise((resolve, reject) => {
-    const child = spawn(env.rembgCommand, ["i", file.path, out], { windowsHide: true });
+    const child = spawn(env.rembgCommand, ["i", "-m", env.rembgModel, file.path, out], { windowsHide: true });
     let stderr = "";
     const timeout = setTimeout(() => {
       child.kill("SIGKILL");
@@ -334,7 +334,10 @@ async function removeBackground(file) {
     child.on("close", (code) => {
       clearTimeout(timeout);
       if (code === 0) resolve();
-      else reject(new AppError(stderr || "Background removal failed. Please try another image.", 400));
+      else {
+        console.warn("rembg failed:", stderr);
+        reject(new AppError(stderr || "Background removal failed. Please try another image.", 400));
+      }
     });
   });
 
