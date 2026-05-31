@@ -311,13 +311,25 @@ async function heicToJpg(file) {
 
 async function removeBackground(file) {
   const out = outputPath(".png");
+  const input = outputPath(".png");
+  await sharp(file.path)
+    .rotate()
+    .resize({ width: 1600, height: 1600, fit: "inside", withoutEnlargement: true })
+    .png({ compressionLevel: 6 })
+    .toFile(input);
+
   await new Promise((resolve, reject) => {
-    const child = spawn(env.rembgCommand, ["i", "-m", env.rembgModel, file.path, out], { windowsHide: true });
+    const child = spawn(env.rembgCommand, ["i", "-m", env.rembgModel, input, out], { windowsHide: true });
+    let stdout = "";
     let stderr = "";
     const timeout = setTimeout(() => {
       child.kill("SIGKILL");
       reject(new AppError("Background removal took too long. Please try a smaller image.", 408));
     }, 5 * 60 * 1000);
+
+    child.stdout.on("data", (chunk) => {
+      stdout += chunk.toString();
+    });
 
     child.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
@@ -331,12 +343,15 @@ async function removeBackground(file) {
       }));
     });
 
-    child.on("close", (code) => {
+    child.on("close", (code, signal) => {
       clearTimeout(timeout);
       if (code === 0) resolve();
       else {
-        console.warn("rembg failed:", stderr);
-        reject(new AppError(stderr || "Background removal failed. Please try another image.", 400));
+        console.warn("rembg failed:", { code, signal, stdout, stderr });
+        const message = signal === "SIGKILL"
+          ? "Background removal was stopped by the server. The deployment likely needs more memory."
+          : stderr || stdout || "Background removal failed. Please try another image.";
+        reject(new AppError(message, 400));
       }
     });
   });
