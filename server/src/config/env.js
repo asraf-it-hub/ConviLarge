@@ -21,7 +21,7 @@ export const env = {
   maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB || 250),
   fileTtlHours: Number(process.env.FILE_TTL_HOURS || 24),
   qpdfPath: process.env.QPDF_PATH || "qpdf",
-  removeBgApiKey: process.env.REMOVEBG_API_KEY || ""
+  rembgCommand: process.env.REMBG_COMMAND || "rembg"
 };
 
 export const paths = {

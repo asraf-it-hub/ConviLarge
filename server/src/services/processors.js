@@ -310,28 +310,34 @@ async function heicToJpg(file) {
 }
 
 async function removeBackground(file) {
-  if (!env.removeBgApiKey) {
-    throw new AppError("Remove Background needs REMOVEBG_API_KEY configured on the server.", 501);
-  }
+  const out = outputPath(".png");
+  await new Promise((resolve, reject) => {
+    const child = spawn(env.rembgCommand, ["i", file.path, out], { windowsHide: true });
+    let stderr = "";
+    const timeout = setTimeout(() => {
+      child.kill("SIGKILL");
+      reject(new AppError("Background removal took too long. Please try a smaller image.", 408));
+    }, 5 * 60 * 1000);
 
-  const form = new FormData();
-  const buffer = await fs.readFile(file.path);
-  form.append("image_file", new Blob([buffer], { type: file.mimetype }), file.originalname);
-  form.append("size", "auto");
+    child.stderr.on("data", (chunk) => {
+      stderr += chunk.toString();
+    });
 
-  const response = await fetch("https://api.remove.bg/v1.0/removebg", {
-    method: "POST",
-    headers: { "X-Api-Key": env.removeBgApiKey },
-    body: form
+    child.on("error", () => {
+      clearTimeout(timeout);
+      reject(new AppError("Remove Background is temporarily unavailable. Please try again later.", 503, {
+        source: "rembg",
+        setup: "Install rembg on the server and make sure REMBG_COMMAND points to it."
+      }));
+    });
+
+    child.on("close", (code) => {
+      clearTimeout(timeout);
+      if (code === 0) resolve();
+      else reject(new AppError(stderr || "Background removal failed. Please try another image.", 400));
+    });
   });
 
-  if (!response.ok) {
-    const message = await response.text();
-    throw new AppError(message || "Background removal failed", response.status);
-  }
-
-  const out = outputPath(".png");
-  await fs.writeFile(out, Buffer.from(await response.arrayBuffer()));
   return fileSnapshot(out, "background-removed.png", "image/png", await statSize(out));
 }
 
@@ -603,9 +609,12 @@ async function pdfToJpg(file) {
     }
   } catch (error) {
     throw new AppError(
-      "PDF to JPG needs PDF rendering support in Sharp/libvips on this machine. Install Poppler/Ghostscript support or use a deployment image that includes it.",
-      501,
-      error.message
+      "PDF to JPG is temporarily unavailable. Please try again later.",
+      503,
+      {
+        cause: error.message,
+        sourceUrl: "https://sharp.pixelplumbing.com/install/"
+      }
     );
   }
   return zipFiles(outputs, "pdf-pages-jpg.zip");
@@ -634,7 +643,7 @@ function runQpdf(args) {
       stderr += chunk.toString();
     });
     child.on("error", () => {
-      reject(new AppError("PDF lock/unlock requires qpdf. Set QPDF_PATH or install qpdf on the server.", 501));
+      reject(new AppError("PDF lock and unlock are temporarily unavailable. Please try again later.", 503));
     });
     child.on("close", (code) => {
       if (code === 0) resolve();

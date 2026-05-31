@@ -16,10 +16,14 @@ Production-style full-stack MVP for temporary file conversion tools.
    npm install
    ```
 
-3. Start both apps:
+3. Start the API and the website in two terminals:
 
    ```bash
-   npm run dev
+   npm run dev:server
+   ```
+
+   ```bash
+   npm run dev:client
    ```
 
 Client: `http://localhost:5173`  
@@ -32,6 +36,7 @@ MongoDB and Redis are optional for local guest use. If MongoDB is unavailable, g
 - MP4 to MP3 uses `ffmpeg-static`.
 - PDF lock/unlock requires `qpdf` available through `QPDF_PATH`.
 - PDF to JPG uses Sharp PDF rendering support. Use a deployment image with PDF rendering support enabled.
+- Remove Background uses the local `rembg` CLI. Install it on the server with `python -m pip install "rembg[cli]"`; set `REMBG_COMMAND` only if the command is not available as `rembg`.
 
 ## Cleanup
 

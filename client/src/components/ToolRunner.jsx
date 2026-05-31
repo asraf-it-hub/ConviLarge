@@ -53,6 +53,9 @@ const progressStages = {
 function friendlyError(error) {
   const message = error.response?.data?.message || error.message || "Processing failed";
   const lower = message.toLowerCase();
+  if (lower.includes("not available on this server")) {
+    return message;
+  }
   if (lower.includes("encrypted") || lower.includes("password") || lower.includes("decrypt")) {
     return "This PDF appears to be encrypted. Unlock it first, then try again.";
   }
