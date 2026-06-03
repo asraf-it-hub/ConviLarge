@@ -8,6 +8,7 @@ import { env } from "./config/env.js";
 import { adminRoutes } from "./routes/adminRoutes.js";
 import { authRoutes } from "./routes/authRoutes.js";
 import { toolRoutes } from "./routes/toolRoutes.js";
+import { aiRoutes } from "./ai/routes/aiRoutes.js";
 import { errorHandler, notFound } from "./middleware/error.js";
 
 export function createApp() {
@@ -27,6 +28,7 @@ export function createApp() {
 
   app.use("/api/auth", authRoutes);
   app.use("/api/admin", adminRoutes);
+  app.use("/api/ai", aiRoutes);
   app.use("/api", toolRoutes);
 
   app.use(notFound);

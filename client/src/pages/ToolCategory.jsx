@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { Navigate, useParams, useSearchParams } from "react-router-dom";
 import ToolCard from "../components/ToolCard.jsx";
 import ToolRunner from "../components/ToolRunner.jsx";
+import AiToolRunner from "../components/ai/AiToolRunner.jsx";
 import { categoryMeta, toolsFor } from "../utils/tools.js";
 
 export default function ToolCategory() {
@@ -22,7 +23,7 @@ export default function ToolCategory() {
       </section>
 
       <section className="mt-8">
-        <ToolRunner tool={selected} />
+        {category === "ai" ? <AiToolRunner tool={selected} /> : <ToolRunner tool={selected} />}
       </section>
 
       <section className="mt-10">

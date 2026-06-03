@@ -20,7 +20,23 @@ export const env = {
   redisUrl: process.env.REDIS_URL || "",
   maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB || 250),
   fileTtlHours: Number(process.env.FILE_TTL_HOURS || 24),
-  qpdfPath: process.env.QPDF_PATH || "qpdf"
+  qpdfPath: process.env.QPDF_PATH || "qpdf",
+  aiEnabled: process.env.AI_ENABLED !== "false",
+  aiDefaultProvider: process.env.AI_DEFAULT_PROVIDER || "openrouter",
+  aiFallbackProvider: process.env.AI_FALLBACK_PROVIDER || "gemini",
+  aiFreeDailyTasks: Number(process.env.AI_FREE_DAILY_TASKS || 5),
+  aiAuthDailyTasks: Number(process.env.AI_AUTH_DAILY_TASKS || 30),
+  aiMaxFileSizeMb: Number(process.env.AI_MAX_FILE_MB || 25),
+  aiMaxTextChars: Number(process.env.AI_MAX_TEXT_CHARS || 120000),
+  aiStoreHistory: process.env.AI_STORE_HISTORY !== "false",
+  openaiApiKey: process.env.OPENAI_API_KEY || "",
+  openaiDefaultModel: process.env.OPENAI_DEFAULT_MODEL || "gpt-5.4-mini",
+  openaiReasoningModel: process.env.OPENAI_REASONING_MODEL || "gpt-5.4",
+  openRouterApiKey: process.env.OPENROUTER_API_KEY || "",
+  openRouterDefaultModel: process.env.OPENROUTER_DEFAULT_MODEL || "google/gemini-2.5-flash",
+  openRouterMaxTokens: Number(process.env.OPENROUTER_MAX_TOKENS || 2000),
+  geminiApiKey: process.env.GEMINI_API_KEY || "",
+  geminiDefaultModel: process.env.GEMINI_DEFAULT_MODEL || "gemini-2.5-flash"
 };
 
 export const paths = {

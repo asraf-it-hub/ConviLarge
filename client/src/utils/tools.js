@@ -1,5 +1,7 @@
 import {
   Archive,
+  Bot,
+  BrainCircuit,
   FileArchive,
   FileImage,
   FileLock2,
@@ -8,6 +10,7 @@ import {
   FileText,
   FileType2,
   FileVideo,
+  MessageSquareText,
   ImageDown,
   Images,
   ImagePlus,
@@ -18,7 +21,9 @@ import {
   Scissors,
   ShieldCheck,
   Shrink,
-  Table2
+  Sparkles,
+  Table2,
+  TextSearch
 } from "lucide-react";
 
 export const categoryMeta = {
@@ -56,6 +61,11 @@ export const categoryMeta = {
     label: "PDF",
     title: "PDF Management",
     summary: "Rotate, remove, extract, watermark, and number PDF pages without forcing users to sign in."
+  },
+  ai: {
+    label: "AI Tools",
+    title: "AI Tools",
+    summary: "Summarize, analyze, extract, and understand files with configurable AI providers."
   }
 };
 
@@ -101,6 +111,12 @@ export const toolCatalog = [
   tool({ id: "extract-pdf-pages", category: "pdf", name: "Extract PDF Pages", description: "Save selected PDF pages as a new file.", keywords: ["pdf", "extract", "pages", "save", "split"], icon: FileOutput, accept: "application/pdf", maxFiles: 1 }),
   tool({ id: "watermark-pdf", category: "pdf", name: "Add Watermark", description: "Add text or logo watermarks to PDF pages.", keywords: ["pdf", "watermark", "logo", "stamp", "text", "brand"], icon: PaintBucket, accept: "application/pdf,image/png,image/jpeg,image/svg+xml,.png,.jpg,.jpeg,.svg", maxFiles: 2 }),
   tool({ id: "number-pdf-pages", category: "pdf", name: "Add Page Numbers", description: "Add page numbers to a PDF.", keywords: ["pdf", "page numbers", "number", "pagination", "pages"], icon: FileText, accept: "application/pdf", maxFiles: 1 })
+  ,
+  tool({ id: "ai-pdf-summarizer", category: "ai", name: "AI PDF Summarizer", description: "Turn long PDFs into summaries, key points, and action items.", keywords: ["ai", "pdf", "summary", "summarize", "document"], icon: Sparkles, accept: "application/pdf,.pdf", maxFiles: 1 }),
+  tool({ id: "ai-resume-analyzer", category: "ai", name: "AI Resume Analyzer", description: "Review resumes for strengths, gaps, ATS notes, and improvements.", keywords: ["ai", "resume", "cv", "ats", "career"], icon: BrainCircuit, accept: "application/pdf,.pdf,.docx,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document", maxFiles: 1 }),
+  tool({ id: "ai-ocr", category: "ai", name: "AI OCR", description: "Extract readable text from screenshots and images.", keywords: ["ai", "ocr", "image", "screenshot", "text"], icon: TextSearch, accept: "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp", maxFiles: 1 }),
+  tool({ id: "ai-tool-recommendation", category: "ai", name: "AI Tool Recommendation", description: "Describe your goal and get the right ConviLarge tool.", keywords: ["ai", "recommend", "tool", "workflow", "file"], icon: Bot, accept: "application/pdf,image/jpeg,image/png,image/webp,video/mp4,audio/mpeg,.pdf,.jpg,.jpeg,.png,.webp,.mp4,.mp3,.docx,.xlsx", maxFiles: 1 }),
+  tool({ id: "chat-with-pdf", category: "ai", name: "Chat With PDF", description: "Ask questions about a PDF and get focused answers.", keywords: ["ai", "chat", "pdf", "question", "document"], icon: MessageSquareText, accept: "application/pdf,.pdf", maxFiles: 1 })
 ];
 
 export function toolsFor(category) {

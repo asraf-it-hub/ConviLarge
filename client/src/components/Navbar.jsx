@@ -12,6 +12,7 @@ const links = [
   ["Compress", "/compress"],
   ["Image", "/image"],
   ["PDF", "/pdf"],
+  ["AI", "/ai"],
   ["Split", "/split"],
   ["Security", "/security"]
 ];
