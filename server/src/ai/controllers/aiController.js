@@ -1,5 +1,5 @@
 import { AppError } from "../../utils/errors.js";
-import { deleteAiTask, getAiHistory, getAiStats, getAiTask, listAiTools, runAiTask } from "../services/aiTaskService.js";
+import { deleteAiTask, getAiHistory, getAiStats, getAiTask, getAiTaskDownload, listAiTools, runAiTask } from "../services/aiTaskService.js";
 
 function sessionId(req) {
   return req.headers["x-convilarge-session"] || req.ip;
@@ -25,6 +25,12 @@ export async function readAiTask(req, res) {
   const task = await getAiTask(req.params.id, req.user, sessionId(req));
   if (!task) throw new AppError("AI task not found", 404);
   res.json({ task });
+}
+
+export async function downloadAiTask(req, res) {
+  const result = await getAiTaskDownload(req.params.id, req.user, sessionId(req));
+  if (!result) throw new AppError("AI output is no longer available", 404);
+  res.download(result.filePath, result.filename);
 }
 
 export async function removeAiTask(req, res) {

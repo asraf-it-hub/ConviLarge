@@ -56,6 +56,56 @@ export const aiTools = {
     accepts: ["application/pdf"],
     extensions: [".pdf"],
     outputMode: "chat"
+  },
+  "ai-document-translator": {
+    title: "AI Document Translator",
+    category: "document",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "text/plain"
+    ],
+    extensions: [".pdf", ".docx", ".pptx", ".txt"],
+    outputMode: "document"
+  },
+  "ai-background-remover": {
+    title: "AI Background Remover",
+    category: "image",
+    minFiles: 1,
+    maxFiles: 20,
+    accepts: ["image/jpeg", "image/png", "image/webp"],
+    extensions: [".jpg", ".jpeg", ".png", ".webp"],
+    outputMode: "image"
+  },
+  "ai-image-upscaler": {
+    title: "AI Image Upscaler",
+    category: "image",
+    minFiles: 1,
+    maxFiles: 20,
+    accepts: ["image/jpeg", "image/png", "image/webp"],
+    extensions: [".jpg", ".jpeg", ".png", ".webp"],
+    outputMode: "image"
+  },
+  "ai-image-enhancer": {
+    title: "AI Image Enhancer",
+    category: "image",
+    minFiles: 1,
+    maxFiles: 20,
+    accepts: ["image/jpeg", "image/png", "image/webp"],
+    extensions: [".jpg", ".jpeg", ".png", ".webp"],
+    outputMode: "image"
+  },
+  "ai-pdf-quiz-generator": {
+    title: "AI PDF to Quiz Generator",
+    category: "document",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: ["application/pdf"],
+    extensions: [".pdf"],
+    outputMode: "quiz"
   }
 };
 

@@ -90,6 +90,62 @@ ${question || "Give me a concise overview of this document."}`
     };
   }
 
+  if (toolType === "ai-document-translator") {
+    return {
+      system: `You translate documents for a professional file utility. Preserve headings, lists, tables in markdown table form, section order, numbers, and names where appropriate. ${jsonRule}`,
+      prompt: `Translate this document.
+
+Target language: ${options.targetLanguage || "English"}
+Selected pages or range: ${options.pageRange || "Entire document"}
+
+Return this JSON shape:
+{
+  "sourceLanguage": "detected source language",
+  "targetLanguage": "target language",
+  "translatedTitle": "short title",
+  "translatedText": "complete translated document with headings, lists, and tables preserved as much as possible",
+  "previewOriginal": "short source preview",
+  "previewTranslated": "short translated preview",
+  "notes": ["formatting or translation note"]
+}
+
+Document text:
+${text}`
+    };
+  }
+
+  if (toolType === "ai-pdf-quiz-generator") {
+    return {
+      system: `You create study quizzes from PDFs. Questions must be grounded in the provided document. ${jsonRule}`,
+      prompt: `Generate a quiz from this PDF.
+
+Difficulty: ${options.difficulty || "medium"}
+Number of questions: ${options.questionCount || 10}
+Question types to include: MCQ, True/False, Fill in the Blanks, Short Answer.
+
+Return this JSON shape:
+{
+  "title": "quiz title",
+  "difficulty": "easy|medium|hard",
+  "questions": [
+    {
+      "id": 1,
+      "type": "mcq|true_false|fill_blank|short_answer",
+      "question": "question text",
+      "options": ["A", "B", "C", "D"],
+      "answer": "correct answer",
+      "explanation": "brief explanation"
+    }
+  ],
+  "answerKey": [{"id": 1, "answer": "answer", "explanation": "why"}],
+  "studyTips": ["tip"]
+}
+
+PDF text:
+${text}`
+    };
+  }
+
   return {
     system: `You help users understand files. ${jsonRule}`,
     prompt: text || options.request || "Analyze this file."

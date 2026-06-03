@@ -1,13 +1,42 @@
 import fs from "fs/promises";
 import path from "path";
+import { PDFDocument } from "pdf-lib";
 import { env } from "../../config/env.js";
 import { AppError } from "../../utils/errors.js";
 import { compactWhitespace, clampText } from "../utils/chunkText.js";
 import { hashText } from "../utils/hash.js";
 
-async function extractPdf(filePath) {
+function parsePageRange(range, pageCount) {
+  if (!range) return null;
+  const selected = new Set();
+  for (const part of String(range).split(",")) {
+    const token = part.trim();
+    if (!token) continue;
+    const [startRaw, endRaw] = token.split("-");
+    const start = Number(startRaw);
+    const end = Number(endRaw || startRaw);
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 1 || end > pageCount || start > end) {
+      throw new AppError(`Invalid page range. Use values between 1 and ${pageCount}.`);
+    }
+    for (let page = start; page <= end; page += 1) selected.add(page - 1);
+  }
+  return selected.size ? [...selected].sort((a, b) => a - b) : null;
+}
+
+async function selectedPdfBuffer(filePath, pageRange) {
+  if (!pageRange) return fs.readFile(filePath);
+  const source = await PDFDocument.load(await fs.readFile(filePath), { ignoreEncryption: true });
+  const selected = parsePageRange(pageRange, source.getPageCount());
+  if (!selected) return fs.readFile(filePath);
+  const output = await PDFDocument.create();
+  const pages = await output.copyPages(source, selected);
+  pages.forEach((page) => output.addPage(page));
+  return Buffer.from(await output.save({ useObjectStreams: true }));
+}
+
+async function extractPdf(filePath, options = {}) {
   const pdfParse = (await import("pdf-parse")).default;
-  const buffer = await fs.readFile(filePath);
+  const buffer = await selectedPdfBuffer(filePath, options.pageRange);
   const result = await pdfParse(buffer);
   return {
     text: result.text || "",
@@ -24,6 +53,28 @@ async function extractDocx(filePath) {
   };
 }
 
+async function extractPptx(filePath) {
+  const JSZip = (await import("jszip")).default;
+  const zip = await JSZip.loadAsync(await fs.readFile(filePath));
+  const slideNames = Object.keys(zip.files)
+    .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+    .sort((a, b) => Number(a.match(/slide(\d+)/)?.[1] || 0) - Number(b.match(/slide(\d+)/)?.[1] || 0));
+
+  const slides = [];
+  for (const name of slideNames) {
+    const xml = await zip.files[name].async("string");
+    const text = [...xml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)]
+      .map((match) => match[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">"))
+      .join(" ");
+    if (text.trim()) slides.push(`Slide ${slides.length + 1}: ${text}`);
+  }
+
+  return {
+    text: slides.join("\n\n"),
+    pageCount: slideNames.length || null
+  };
+}
+
 async function extractTxt(filePath) {
   return {
     text: await fs.readFile(filePath, "utf8"),
@@ -31,17 +82,22 @@ async function extractTxt(filePath) {
   };
 }
 
-export async function extractDocumentText(file) {
+export async function extractDocumentText(file, options = {}) {
   const extension = path.extname(file.originalname || file.path).toLowerCase();
   let result;
 
   if (file.mimetype === "application/pdf" || extension === ".pdf") {
-    result = await extractPdf(file.path);
+    result = await extractPdf(file.path, options);
   } else if (
     file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
     extension === ".docx"
   ) {
     result = await extractDocx(file.path);
+  } else if (
+    file.mimetype === "application/vnd.openxmlformats-officedocument.presentationml.presentation" ||
+    extension === ".pptx"
+  ) {
+    result = await extractPptx(file.path);
   } else if (file.mimetype === "text/plain" || extension === ".txt") {
     result = await extractTxt(file.path);
   } else {
