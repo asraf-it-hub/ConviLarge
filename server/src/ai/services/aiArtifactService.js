@@ -25,6 +25,15 @@ function wrapText(text, max = 92) {
   return lines;
 }
 
+function safePdfText(value = "") {
+  return String(value)
+    .replace(/[\u2018\u2019]/g, "'")
+    .replace(/[\u201C\u201D]/g, '"')
+    .replace(/\u2013|\u2014/g, "-")
+    .replace(/\u2026/g, "...")
+    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, "?");
+}
+
 async function writePdf({ title, sections, filename }) {
   const pdf = await PDFDocument.create();
   const regular = await pdf.embedFont(StandardFonts.Helvetica);
@@ -40,15 +49,15 @@ async function writePdf({ title, sections, filename }) {
 
   function drawLine(line, { size = 10.5, font = regular, color = rgb(0.12, 0.16, 0.22), gap = 15 } = {}) {
     if (y < 54) nextPage();
-    page.drawText(line, { x: margin, y, size, font, color, maxWidth: 504 });
+    page.drawText(safePdfText(line), { x: margin, y, size, font, color, maxWidth: 504 });
     y -= gap;
   }
 
-  drawLine(title, { size: 20, font: bold, gap: 26 });
+  drawLine(safePdfText(title), { size: 20, font: bold, gap: 26 });
   for (const section of sections) {
-    if (section.heading) drawLine(section.heading, { size: 13, font: bold, color: rgb(0.08, 0.23, 0.36), gap: 18 });
+    if (section.heading) drawLine(safePdfText(section.heading), { size: 13, font: bold, color: rgb(0.08, 0.23, 0.36), gap: 18 });
     for (const paragraph of section.body || []) {
-      const lines = wrapText(paragraph);
+      const lines = wrapText(safePdfText(paragraph));
       lines.forEach((line) => drawLine(line));
       y -= 5;
     }
@@ -65,7 +74,7 @@ function escapeXml(value = "") {
 
 async function writeDocx({ title, sections, filename }) {
   const JSZip = (await import("jszip")).default;
-  const zip = new JSZip();
+  const zip = JSZip();
   const paragraphs = [
     `<w:p><w:r><w:rPr><w:b/><w:sz w:val="36"/></w:rPr><w:t>${escapeXml(title)}</w:t></w:r></w:p>`,
     ...sections.flatMap((section) => [
@@ -79,7 +88,10 @@ async function writeDocx({ title, sections, filename }) {
   zip.folder("word").file("document.xml", `<?xml version="1.0" encoding="UTF-8"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${paragraphs}<w:sectPr><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440"/></w:sectPr></w:body></w:document>`);
 
   const out = outputPath(".docx");
-  await fs.writeFile(out, await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }));
+  const buffer = zip.generateAsync
+    ? await zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" })
+    : zip.generate({ type: "nodebuffer", compression: "DEFLATE" });
+  await fs.writeFile(out, buffer);
   return fileSnapshot(out, filename, "application/vnd.openxmlformats-officedocument.wordprocessingml.document", await statSize(out));
 }
 
