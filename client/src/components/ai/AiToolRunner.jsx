@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, CheckCircle2, Clock, Download, Eye, Loader2, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { Bot, CheckCircle2, Clock, Download, Eye, Loader2, LogIn, RefreshCw, Sparkles, Trash2 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
+import { useLocation, useNavigate } from "react-router-dom";
 import { api } from "../../services/api.js";
 import { formatBytes } from "../../utils/tools.js";
 import Button from "../Button.jsx";
@@ -378,8 +379,12 @@ export default function AiToolRunner({ tool }) {
   const [stage, setStage] = useState("idle");
   const [progress, setProgress] = useState(0);
   const [previewUrls, setPreviewUrls] = useState([]);
+  const [limitNotice, setLimitNotice] = useState(null);
+  const navigate = useNavigate();
+  const location = useLocation();
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
   const canSubmit = tool.id === "ai-tool-recommendation" ? Boolean(files.length || request.trim()) : Boolean(files.length);
+  const loginPath = `/auth?next=${encodeURIComponent(`${location.pathname}${location.search}`)}`;
   const firstPreview = previewUrls[0]?.url;
 
   useEffect(() => {
@@ -390,6 +395,7 @@ export default function AiToolRunner({ tool }) {
     setTask(null);
     setFiles([]);
     setBackgroundFile(null);
+    setLimitNotice(null);
     setOptions(initialOptions());
     setStage("idle");
     setProgress(0);
@@ -433,6 +439,7 @@ export default function AiToolRunner({ tool }) {
 
     setBusy(true);
     setTask(null);
+    setLimitNotice(null);
     setStage("uploading");
     setProgress(stages.uploading.value);
 
@@ -454,7 +461,13 @@ export default function AiToolRunner({ tool }) {
       toast.success("AI result ready");
       refreshStats();
     } catch (error) {
-      toast.error(friendlyError(error));
+      const response = error.response?.data;
+      if (error.response?.status === 429 && response?.code === "AI_GUEST_LIMIT_REACHED") {
+        setLimitNotice(response);
+        toast.error("Please sign in to continue using AI tools");
+      } else {
+        toast.error(friendlyError(error));
+      }
       setStage("idle");
       setProgress(0);
     } finally {
@@ -475,8 +488,54 @@ export default function AiToolRunner({ tool }) {
   return (
     <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-6">
       <div className="space-y-5">
-        <form onSubmit={submit} className="space-y-5">
-          <FileDropzone files={files} setFiles={setFiles} tool={tool} />
+        {limitNotice && (
+          <motion.section
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-lg bg-white p-5 ring-1 ring-brand-200 dark:bg-slate-900 dark:ring-brand-900/60"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-start gap-3">
+                <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-900/50 dark:text-brand-100">
+                  <LogIn size={21} />
+                </span>
+                <div>
+                  <h2 className="text-lg font-black text-slate-950 dark:text-white">Sign in to continue</h2>
+                  <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+                    {limitNotice.message} Login is optional until you choose it, and this tool will reopen after sign in.
+                  </p>
+                  <div className="mt-4 grid gap-2 text-sm font-semibold text-slate-700 dark:text-slate-300 sm:grid-cols-3">
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-brand-600 dark:text-brand-300" />
+                      Store AI history
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-brand-600 dark:text-brand-300" />
+                      Free unlimited AI tools access
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-brand-600 dark:text-brand-300" />
+                      Future downloads
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <Button
+                type="button"
+                onClick={() => navigate(loginPath)}
+                className="shrink-0"
+              >
+                <LogIn size={18} />
+                Login
+              </Button>
+            </div>
+          </motion.section>
+        )}
+
+        {!limitNotice && (
+          <>
+            <form onSubmit={submit} className="space-y-5">
+              <FileDropzone files={files} setFiles={setFiles} tool={tool} />
 
           {firstPreview && <ComparisonPreview beforeUrl={firstPreview} label="Live preview" />}
 
@@ -558,9 +617,11 @@ export default function AiToolRunner({ tool }) {
               )}
             </div>
           </section>
-        </form>
+            </form>
 
-        <AnimatePresence>{task && <AiResult task={task} beforeUrl={firstPreview} />}</AnimatePresence>
+            <AnimatePresence>{task && <AiResult task={task} beforeUrl={firstPreview} />}</AnimatePresence>
+          </>
+        )}
       </div>
 
       <aside className="space-y-5">

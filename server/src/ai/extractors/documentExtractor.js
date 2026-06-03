@@ -55,14 +55,15 @@ async function extractDocx(filePath) {
 
 async function extractPptx(filePath) {
   const JSZip = (await import("jszip")).default;
-  const zip = await JSZip.loadAsync(await fs.readFile(filePath));
+  const input = await fs.readFile(filePath);
+  const zip = JSZip.loadAsync ? await JSZip.loadAsync(input) : JSZip().load(input);
   const slideNames = Object.keys(zip.files)
     .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
     .sort((a, b) => Number(a.match(/slide(\d+)/)?.[1] || 0) - Number(b.match(/slide(\d+)/)?.[1] || 0));
 
   const slides = [];
   for (const name of slideNames) {
-    const xml = await zip.files[name].async("string");
+    const xml = zip.files[name].async ? await zip.files[name].async("string") : zip.files[name].asText();
     const text = [...xml.matchAll(/<a:t>([\s\S]*?)<\/a:t>/g)]
       .map((match) => match[1].replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">"))
       .join(" ");

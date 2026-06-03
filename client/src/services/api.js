@@ -12,7 +12,7 @@ api.interceptors.request.use((config) => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   let sessionId = localStorage.getItem("convilarge_session");
   if (!sessionId) {
-    sessionId = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    sessionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     localStorage.setItem("convilarge_session", sessionId);
   }
   config.headers["X-ConviLarge-Session"] = sessionId;

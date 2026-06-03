@@ -24,7 +24,7 @@ export const env = {
   aiEnabled: process.env.AI_ENABLED !== "false",
   aiDefaultProvider: process.env.AI_DEFAULT_PROVIDER || "openrouter",
   aiFallbackProvider: process.env.AI_FALLBACK_PROVIDER || "gemini",
-  aiFreeDailyTasks: Number(process.env.AI_FREE_DAILY_TASKS || 5),
+  aiFreeDailyTasks: Number(process.env.AI_FREE_DAILY_TASKS || 3),
   aiAuthDailyTasks: Number(process.env.AI_AUTH_DAILY_TASKS || 30),
   aiMaxFileSizeMb: Number(process.env.AI_MAX_FILE_MB || 25),
   aiMaxTextChars: Number(process.env.AI_MAX_TEXT_CHARS || 120000),

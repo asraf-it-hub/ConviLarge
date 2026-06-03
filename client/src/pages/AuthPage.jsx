@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import Button from "../components/Button.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -10,6 +10,9 @@ export default function AuthPage() {
   const [busy, setBusy] = useState(false);
   const { login, signup } = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const rawNext = params.get("next");
+  const next = rawNext?.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
 
   async function submit(event) {
     event.preventDefault();
@@ -18,7 +21,7 @@ export default function AuthPage() {
       if (mode === "login") await login({ email: form.email, password: form.password });
       else await signup(form);
       toast.success("Welcome to ConviLarge");
-      navigate("/dashboard");
+      navigate(next, { replace: true });
     } catch (error) {
       toast.error(error.response?.data?.message || "Authentication failed");
     } finally {
