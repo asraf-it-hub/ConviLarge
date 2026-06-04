@@ -2,12 +2,13 @@ import { Router } from "express";
 import { asyncHandler } from "../utils/errors.js";
 import { optionalAuth, requireAuth } from "../middleware/auth.js";
 import { upload, validateUpload } from "../middleware/upload.js";
-import { createToolJob, dashboard, deleteJob, downloadJob, getJob, health, listTools } from "../controllers/toolController.js";
+import { createToolJob, dashboard, deleteJob, downloadJob, getJob, health, listTools, systemStatus } from "../controllers/toolController.js";
 import { runCleanup } from "../controllers/cleanupController.js";
 
 export const toolRoutes = Router();
 
 toolRoutes.get("/health", asyncHandler(health));
+toolRoutes.get("/system/status", asyncHandler(systemStatus));
 toolRoutes.get("/tools", asyncHandler(listTools));
 toolRoutes.post("/tools/run", optionalAuth, upload.array("files", 50), validateUpload, asyncHandler(createToolJob));
 toolRoutes.get("/jobs/:id", optionalAuth, asyncHandler(getJob));

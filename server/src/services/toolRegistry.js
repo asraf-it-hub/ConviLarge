@@ -228,6 +228,23 @@ export const tools = {
     accepts: ["application/pdf"],
     output: "application/pdf",
     nativeHelper: "qpdf"
+  },
+  "view-pdf-metadata": {
+    title: "View PDF Metadata",
+    category: "security",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: ["application/pdf"],
+    output: "application/json"
+  },
+  "remove-pdf-metadata": {
+    title: "Remove PDF Metadata",
+    category: "security",
+    minFiles: 1,
+    maxFiles: 1,
+    accepts: ["application/pdf"],
+    output: "application/pdf",
+    nativeHelper: "qpdf"
   }
 };
 

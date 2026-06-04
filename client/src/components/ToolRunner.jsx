@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { BadgeCheck, CheckCircle2, Download, FileDown, Image, Loader2, RefreshCw, Trash2, Type, WandSparkles } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Download, FileDown, Image, Loader2, RefreshCw, ShieldCheck, Trash2, Type, WandSparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { api, downloadUrl } from "../services/api.js";
@@ -56,7 +56,10 @@ function friendlyError(error) {
   if (lower.includes("not available on this server")) {
     return message;
   }
-  if (lower.includes("encrypted") || lower.includes("password") || lower.includes("decrypt")) {
+  if (lower.includes("incorrect") || lower.includes("confirmation") || lower.includes("at least") || lower.includes("uppercase")) {
+    return message;
+  }
+  if (lower.includes("encrypted") || lower.includes("decrypt")) {
     return "This PDF appears to be encrypted. Unlock it first, then try again.";
   }
   if (lower.includes("invalid page range")) {
@@ -73,6 +76,7 @@ export default function ToolRunner({ tool }) {
   const [level, setLevel] = useState("balanced");
   const [pageRange, setPageRange] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [width, setWidth] = useState("");
   const [height, setHeight] = useState("");
   const [keepAspect, setKeepAspect] = useState(true);
@@ -91,6 +95,7 @@ export default function ToolRunner({ tool }) {
   const [progress, setProgress] = useState(0);
   const [stage, setStage] = useState("idle");
   const [job, setJob] = useState(null);
+  const [errorMessage, setErrorMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const totalSize = useMemo(() => files.reduce((sum, file) => sum + file.size, 0), [files]);
   const pdfFile = useMemo(() => files.find((file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")), [files]);
@@ -98,6 +103,19 @@ export default function ToolRunner({ tool }) {
   const originalSize = job?.meta?.originalTotalBytes || totalSize;
   const savings = outputSize && originalSize ? Math.round((1 - outputSize / originalSize) * 100) : null;
   const isCompressionTool = tool.id.includes("compress");
+  const metadata = job?.meta?.metadata;
+  const isMetadataTool = tool.id === "view-pdf-metadata";
+  const passwordStrength = useMemo(() => {
+    if (!password) return { label: "Required", value: 0, color: "bg-slate-300" };
+    let score = 0;
+    if (password.length >= 8) score += 1;
+    if (/[a-z]/.test(password) && /[A-Z]/.test(password)) score += 1;
+    if (/\d/.test(password)) score += 1;
+    if (/[^a-zA-Z0-9]/.test(password) || password.length >= 12) score += 1;
+    if (score <= 1) return { label: "Weak", value: 33, color: "bg-red-500" };
+    if (score <= 3) return { label: "Good", value: 66, color: "bg-amber-500" };
+    return { label: "Strong", value: 100, color: "bg-emerald-500" };
+  }, [password]);
 
   async function submit(event) {
     event.preventDefault();
@@ -106,12 +124,14 @@ export default function ToolRunner({ tool }) {
     setStage("uploading");
     setProgress(progressStages.uploading.value);
     setJob(null);
+    setErrorMessage("");
 
     const form = new FormData();
     form.append("toolType", tool.id);
     form.append("level", level);
     form.append("pageRange", pageRange);
     form.append("password", password);
+    form.append("confirmPassword", confirmPassword);
     form.append("width", width);
     form.append("height", height);
     form.append("keepAspect", String(keepAspect));
@@ -148,9 +168,11 @@ export default function ToolRunner({ tool }) {
       setProgress(100);
       setStage("ready");
       setJob(data.job);
-      toast.success("Your file is ready");
+      toast.success(isMetadataTool ? "Metadata report is ready" : "Your file is ready");
     } catch (error) {
-      toast.error(friendlyError(error));
+      const message = friendlyError(error);
+      setErrorMessage(message);
+      toast.error(message);
       setProgress(0);
       setStage("idle");
     } finally {
@@ -161,6 +183,7 @@ export default function ToolRunner({ tool }) {
   const needsLevel = tool.id.includes("compress");
   const needsRange = ["split-pdf", "rotate-pdf", "remove-pdf-pages", "extract-pdf-pages"].includes(tool.id);
   const needsPassword = tool.id === "lock-pdf" || tool.id === "unlock-pdf";
+  const needsConfirmPassword = tool.id === "lock-pdf";
   const needsResize = tool.id === "resize-image";
   const needsCrop = tool.id === "crop-image";
   const needsAngle = tool.id === "rotate-pdf";
@@ -185,6 +208,7 @@ export default function ToolRunner({ tool }) {
     setProgress(0);
     setStage("idle");
     setFiles([]);
+    setErrorMessage("");
   }
 
   async function deleteOutput() {
@@ -416,10 +440,35 @@ export default function ToolRunner({ tool }) {
         )}
 
         {needsPassword && (
-          <label className="mt-5 block text-sm font-semibold">
-            PDF password
-            <input className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-950" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" />
-          </label>
+          <div className="mt-5 space-y-3">
+            <label className="block text-sm font-semibold">
+              PDF password
+              <input className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-950" type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" autoComplete="new-password" />
+            </label>
+            {needsConfirmPassword && (
+              <>
+                <label className="block text-sm font-semibold">
+                  Confirm password
+                  <input className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-950" type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirm password" autoComplete="new-password" />
+                </label>
+                <div>
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-500">
+                    <span>Password strength</span>
+                    <span>{passwordStrength.label}</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                    <div className={`h-full ${passwordStrength.color}`} style={{ width: `${passwordStrength.value}%` }} />
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="mt-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200">
+            {errorMessage}
+          </div>
         )}
 
         <div className="mt-5 flex items-center justify-between text-xs font-bold uppercase tracking-normal text-slate-500">
@@ -436,6 +485,40 @@ export default function ToolRunner({ tool }) {
         </Button>
 
         <AnimatePresence>
+          {metadata && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-4 rounded-lg bg-white p-4 text-sm ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800"
+            >
+              <div className="flex items-center gap-3">
+                <span className="grid h-9 w-9 place-items-center rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-200">
+                  <ShieldCheck size={18} />
+                </span>
+                <div>
+                  <p className="font-black text-slate-950 dark:text-white">Metadata report</p>
+                  <p className="text-xs text-slate-500">No changes were made to this PDF.</p>
+                </div>
+              </div>
+              <dl className="mt-4 divide-y divide-slate-100 rounded-lg border border-slate-100 dark:divide-slate-800 dark:border-slate-800">
+                {Object.entries(metadata.labels || {}).map(([key, label]) => {
+                  const rawValue = metadata.fields?.[key];
+                  const value = key === "fileSize" ? formatBytes(rawValue) : rawValue || "Not set";
+                  return (
+                    <div key={key} className="grid gap-1 px-3 py-2 sm:grid-cols-[9rem_minmax(0,1fr)]">
+                      <dt className="text-xs font-black uppercase text-slate-500">{label}</dt>
+                      <dd className="min-w-0 break-words font-semibold text-slate-800 dark:text-slate-100">{value}</dd>
+                    </div>
+                  );
+                })}
+              </dl>
+              <button type="button" onClick={resetTool} className="focus-ring mt-4 inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-white px-3 text-xs font-bold text-slate-700 ring-1 ring-slate-200 dark:bg-slate-950 dark:text-slate-100 dark:ring-slate-700">
+                <RefreshCw size={15} />
+                New
+              </button>
+            </motion.div>
+          )}
           {job?.outputFile && (
             <motion.div
               initial={{ opacity: 0, y: 8 }}

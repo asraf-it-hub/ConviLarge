@@ -7,10 +7,18 @@ import { categoryMeta, toolsFor } from "../utils/tools.js";
 
 export default function ToolCategory() {
   const { category } = useParams();
+  const { toolSlug } = useParams();
   const [params] = useSearchParams();
   const meta = categoryMeta[category];
   const tools = useMemo(() => toolsFor(category), [category]);
-  const selected = tools.find((tool) => tool.id === params.get("tool")) || tools[0];
+  const securitySlugMap = {
+    "lock-pdf": "lock-pdf",
+    "unlock-pdf": "unlock-pdf",
+    "view-metadata": "view-pdf-metadata",
+    "remove-metadata": "remove-pdf-metadata"
+  };
+  const selectedId = toolSlug ? securitySlugMap[toolSlug] || toolSlug : params.get("tool");
+  const selected = tools.find((tool) => tool.id === selectedId) || tools[0];
 
   if (!meta) return <Navigate to="/" replace />;
 

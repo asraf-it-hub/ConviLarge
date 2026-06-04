@@ -19,7 +19,9 @@ export function errorHandler(error, _req, res, _next) {
   const lowerMessage = rawMessage.toLowerCase();
   let message = status === 500 ? "Something went wrong while processing your request" : rawMessage;
 
-  if (lowerMessage.includes("encrypted") || lowerMessage.includes("password") || lowerMessage.includes("decrypt")) {
+  if (lowerMessage.includes("incorrect") || lowerMessage.includes("not password protected") || lowerMessage.includes("confirmation")) {
+    message = rawMessage;
+  } else if (lowerMessage.includes("encrypted") || lowerMessage.includes("decrypt")) {
     message = "This PDF appears to be encrypted. Unlock it first, then try again.";
   } else if (lowerMessage.includes("no pdf header") || lowerMessage.includes("invalid pdf")) {
     message = "This file does not look like a valid PDF. Please upload a different PDF.";

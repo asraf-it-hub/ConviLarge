@@ -35,14 +35,17 @@ export async function runToolJob({ toolType, files, options, user }) {
   });
 
   try {
-    const outputFile = await processTool(toolType, files, options);
+    const result = await processTool(toolType, files, options);
+    const isMetadataReport = result?.kind === "metadata";
+    const outputFile = isMetadataReport ? null : result;
     const completed = await updateJobRecord(job.id, {
       status: "completed",
       outputFile,
       meta: {
         ...job.meta,
-        outputBytes: outputFile.size,
-        compressionRatio: job.meta?.originalTotalBytes
+        ...(isMetadataReport ? { metadata: result.metadata } : {}),
+        outputBytes: outputFile?.size || null,
+        compressionRatio: outputFile?.size && job.meta?.originalTotalBytes
           ? Math.round((1 - outputFile.size / job.meta.originalTotalBytes) * 100)
           : null
       }

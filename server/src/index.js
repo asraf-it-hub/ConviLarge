@@ -3,8 +3,10 @@ import { env } from "./config/env.js";
 import { connectDb } from "./config/db.js";
 import { ensureStorage } from "./utils/fs.js";
 import { startCleanupJob } from "./services/cleanupService.js";
+import { detectSystemDependencies } from "./services/systemStatusService.js";
 
 await ensureStorage();
+await detectSystemDependencies();
 await connectDb();
 startCleanupJob();
 

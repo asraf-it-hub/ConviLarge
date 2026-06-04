@@ -41,6 +41,14 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                 }
               />
               <Route
+                path="/:category/:toolSlug"
+                element={
+                  <Suspense fallback={<SkeletonPage />}>
+                    <ToolCategory />
+                  </Suspense>
+                }
+              />
+              <Route
                 path="/auth"
                 element={
                   <Suspense fallback={<SkeletonPage />}>

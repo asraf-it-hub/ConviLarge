@@ -2,12 +2,12 @@
 
 Most ConviLarge tools run with the Node dependencies already in this project. These tools need native server support before they are fully production-ready.
 
-## Lock PDF and Unlock PDF
+## PDF Security
 
-- Tool ids: `lock-pdf`, `unlock-pdf`
+- Tool ids: `lock-pdf`, `unlock-pdf`, `remove-pdf-metadata`
 - Required config: `QPDF_PATH`
 - Source: https://qpdf.readthedocs.io/en/latest/installation.html
-- Notes: Install qpdf on the server and set `QPDF_PATH` if the binary is not available as `qpdf` on the system path.
+- Notes: Install qpdf on the server and set `QPDF_PATH` if the binary is not available as `qpdf` on the system path. On Render, use a Docker image or build environment that installs qpdf, then confirm `/api/system/status` returns `"qpdf": true`.
 
 ## PDF to JPG
 

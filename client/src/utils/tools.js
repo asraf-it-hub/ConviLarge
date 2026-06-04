@@ -5,6 +5,7 @@ import {
   FileArchive,
   FileImage,
   FileLock2,
+  FileSearch,
   FileOutput,
   FileStack,
   FileText,
@@ -70,13 +71,20 @@ export const categoryMeta = {
 };
 
 function tool({ id, category, name, description, keywords, ...rest }) {
+  const dedicatedSecurityRoutes = {
+    "lock-pdf": "/security/lock-pdf",
+    "unlock-pdf": "/security/unlock-pdf",
+    "view-pdf-metadata": "/security/view-metadata",
+    "remove-pdf-metadata": "/security/remove-metadata"
+  };
+
   return {
     id,
     name,
     title: name,
     description,
     category,
-    route: `/${category}?tool=${id}`,
+    route: dedicatedSecurityRoutes[id] || `/${category}?tool=${id}`,
     keywords,
     ...rest
   };
@@ -102,6 +110,8 @@ export const toolCatalog = [
   tool({ id: "split-pdf", category: "split", name: "PDF Split", description: "Split or extract pages from a PDF.", keywords: ["pdf", "split", "extract", "pages", "pdf split", "split pdf"], icon: Scissors, accept: "application/pdf", maxFiles: 1 }),
   tool({ id: "lock-pdf", category: "security", name: "Lock PDF", description: "Protect PDFs with a password.", keywords: ["pdf", "lock", "password", "protect", "secure", "encrypt"], icon: FileLock2, accept: "application/pdf", maxFiles: 1 }),
   tool({ id: "unlock-pdf", category: "security", name: "Unlock PDF", description: "Remove password protection from PDFs you can open.", keywords: ["pdf", "unlock", "password", "decrypt", "security"], icon: ShieldCheck, accept: "application/pdf", maxFiles: 1 }),
+  tool({ id: "view-pdf-metadata", category: "security", name: "View PDF Metadata", description: "Inspect title, author, dates, page count, version, and file size.", keywords: ["pdf", "metadata", "properties", "info", "privacy"], icon: FileSearch, accept: "application/pdf", maxFiles: 1 }),
+  tool({ id: "remove-pdf-metadata", category: "security", name: "Remove PDF Metadata", description: "Create a privacy-clean PDF with embedded metadata removed.", keywords: ["pdf", "metadata", "remove", "privacy", "clean"], icon: ShieldCheck, accept: "application/pdf", maxFiles: 1 }),
   tool({ id: "resize-image", category: "image", name: "Resize Image", description: "Resize images to exact dimensions.", keywords: ["image", "resize", "dimensions", "width", "height"], icon: Maximize2, accept: "image/jpeg,image/png,image/webp", maxFiles: 1 }),
   tool({ id: "crop-image", category: "image", name: "Crop Image", description: "Crop images by position and size.", keywords: ["image", "crop", "trim", "jpg", "png", "webp"], icon: Scissors, accept: "image/jpeg,image/png,image/webp", maxFiles: 1 }),
   tool({ id: "heic-to-jpg", category: "image", name: "HEIC to JPG", description: "Convert HEIC photos into JPG images.", keywords: ["heic", "heif", "jpg", "jpeg", "iphone", "image", "convert"], icon: ImagePlus, accept: ".heic,.heif,image/heic,image/heif", maxFiles: 1 }),

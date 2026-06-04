@@ -1,6 +1,5 @@
 import fs from "fs/promises";
 import path from "path";
-import { spawn } from "child_process";
 import { createRequire } from "module";
 import archiver from "archiver";
 import ExcelJS from "exceljs";
@@ -8,9 +7,9 @@ import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
 import { degrees, PDFDocument, rgb, StandardFonts } from "pdf-lib";
-import { env } from "../config/env.js";
 import { AppError } from "../utils/errors.js";
 import { fileSnapshot, outputPath, statSize } from "../utils/fs.js";
+import { getMetadata, lockPdf, removeMetadata, unlockPdf } from "./pdfSecurity/index.js";
 
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
 const require = createRequire(import.meta.url);
@@ -610,37 +609,6 @@ async function mp4ToMp3(file) {
   return fileSnapshot(out, `${path.parse(file.originalname).name}.mp3`, "audio/mpeg", await statSize(out));
 }
 
-function runQpdf(args) {
-  return new Promise((resolve, reject) => {
-    const child = spawn(env.qpdfPath, args, { windowsHide: true });
-    let stderr = "";
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-    child.on("error", () => {
-      reject(new AppError("PDF lock and unlock are temporarily unavailable. Please try again later.", 503));
-    });
-    child.on("close", (code) => {
-      if (code === 0) resolve();
-      else reject(new AppError(stderr || "qpdf failed to process this PDF", 400));
-    });
-  });
-}
-
-async function lockPdf(file, password) {
-  if (!password || password.length < 4) throw new AppError("Password must be at least 4 characters.");
-  const out = outputPath(".pdf");
-  await runQpdf(["--encrypt", password, password, "256", "--", file.path, out]);
-  return fileSnapshot(out, "locked.pdf", "application/pdf", await statSize(out));
-}
-
-async function unlockPdf(file, password) {
-  const out = outputPath(".pdf");
-  const args = password ? [`--password=${password}`, "--decrypt", file.path, out] : ["--decrypt", file.path, out];
-  await runQpdf(args);
-  return fileSnapshot(out, "unlocked.pdf", "application/pdf", await statSize(out));
-}
-
 export async function processTool(toolType, files, options = {}) {
   switch (toolType) {
     case "jpg-to-png":
@@ -695,9 +663,13 @@ export async function processTool(toolType, files, options = {}) {
     case "number-pdf-pages":
       return numberPdfPages(files[0]);
     case "lock-pdf":
-      return lockPdf(files[0], options.password);
+      return lockPdf(files[0], options);
     case "unlock-pdf":
-      return unlockPdf(files[0], options.password);
+      return unlockPdf(files[0], options);
+    case "view-pdf-metadata":
+      return { kind: "metadata", metadata: await getMetadata(files[0]) };
+    case "remove-pdf-metadata":
+      return removeMetadata(files[0]);
     default:
       throw new AppError("Unknown tool", 404);
   }
