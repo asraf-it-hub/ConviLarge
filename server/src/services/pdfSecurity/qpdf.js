@@ -1,11 +1,13 @@
 import { spawn } from "child_process";
-import { env } from "../../config/env.js";
 import { AppError } from "../../utils/errors.js";
-import { systemStatus } from "../systemStatusService.js";
+import { detectSystemDependencies, systemStatus } from "../systemStatusService.js";
 
-export function requireQpdf() {
+export async function requireQpdf() {
   if (!systemStatus.qpdf) {
-    throw new AppError("QPDF is not installed on this server. PDF security tools are temporarily unavailable.", 503);
+    await detectSystemDependencies({ silent: true });
+    if (!systemStatus.qpdf) {
+      throw new AppError("QPDF is not installed on this server. PDF security tools are temporarily unavailable.", 503);
+    }
   }
 }
 
@@ -29,11 +31,11 @@ function qpdfMessage(stderr, fallback) {
   return fallback;
 }
 
-export function runQpdf(args, fallback = "QPDF could not process this PDF.") {
-  requireQpdf();
+export async function runQpdf(args, fallback = "QPDF could not process this PDF.") {
+  await requireQpdf();
 
   return new Promise((resolve, reject) => {
-    const child = spawn(env.qpdfPath, args, { windowsHide: true });
+    const child = spawn(systemStatus.qpdfPath || "qpdf", args, { windowsHide: true });
     let stdout = "";
     let stderr = "";
 

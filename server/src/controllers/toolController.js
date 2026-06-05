@@ -6,7 +6,7 @@ import { getDashboardStats } from "../services/dashboardStatsService.js";
 import { dbState } from "../config/db.js";
 import { redisState } from "../config/redis.js";
 import { AppError } from "../utils/errors.js";
-import { getSystemStatus } from "../services/systemStatusService.js";
+import { detectSystemDependencies, getSystemStatus } from "../services/systemStatusService.js";
 
 export async function listTools(_req, res) {
   res.json({
@@ -99,12 +99,12 @@ export async function health(_req, res) {
     redisError: redisState.error,
     qpdf: system.qpdf,
     nativeHelpers: {
-      qpdf: system.qpdf ? "available" : "missing; required for PDF security tools via QPDF_PATH",
+      qpdf: system.qpdf ? "available" : "missing; required for PDF lock/unlock via QPDF_PATH",
       pdfRendering: "required for PDF to JPG via Sharp/libvips PDF support"
     }
   });
 }
 
 export async function systemStatus(_req, res) {
-  res.json(getSystemStatus());
+  res.json(await detectSystemDependencies({ silent: true }));
 }

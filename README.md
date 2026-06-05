@@ -34,7 +34,7 @@ MongoDB and Redis are optional for local guest use. If MongoDB is unavailable, g
 ## Native Helpers
 
 - MP4 to MP3 uses `ffmpeg-static`.
-- PDF security tools require `qpdf` available through `QPDF_PATH`. Confirm deployment support at `/api/system/status`.
+- PDF lock/unlock require `qpdf` available through `QPDF_PATH`. Confirm deployment support at `/api/system/status`.
 - PDF to JPG uses Sharp PDF rendering support. Use a deployment image with PDF rendering support enabled.
 
 ## Cleanup

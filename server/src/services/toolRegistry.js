@@ -243,8 +243,7 @@ export const tools = {
     minFiles: 1,
     maxFiles: 1,
     accepts: ["application/pdf"],
-    output: "application/pdf",
-    nativeHelper: "qpdf"
+    output: "application/pdf"
   }
 };
 
