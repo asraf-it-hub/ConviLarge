@@ -6,7 +6,9 @@ import jsQR from "jsqr";
 import {
   CalendarClock,
   CheckCircle2,
+  Clipboard,
   Clock,
+  Code2,
   Copy,
   Download,
   Eye,
@@ -21,6 +23,7 @@ import {
   ScanLine,
   Send,
   ShieldCheck,
+  Type,
   Trash2,
   UploadCloud,
   XCircle
@@ -71,6 +74,44 @@ function StatusPill({ status }) {
       {status}
     </span>
   );
+}
+
+function countdownParts(expiresAt) {
+  const remaining = Math.max(0, new Date(expiresAt).getTime() - Date.now());
+  const days = Math.floor(remaining / 86400000);
+  const hours = Math.floor((remaining % 86400000) / 3600000);
+  const minutes = Math.floor((remaining % 3600000) / 60000);
+  const seconds = Math.floor((remaining % 60000) / 1000);
+  if (!remaining) return "Transfer Expired";
+  if (days) return `${days}d ${hours}h ${minutes}m`;
+  if (hours) return `${hours}h ${minutes}m`;
+  return `${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
+}
+
+function ExpiryCountdown({ expiresAt, status }) {
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    const timer = globalThis.setInterval(() => setTick((value) => value + 1), 1000);
+    return () => globalThis.clearInterval(timer);
+  }, []);
+  const expired = status === "expired" || new Date(expiresAt).getTime() <= Date.now();
+  return (
+    <div className={`rounded-lg px-4 py-3 ring-1 ${expired ? "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-200 dark:ring-rose-900" : "bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-950 dark:text-slate-200 dark:ring-slate-800"}`}>
+      <p className="text-xs font-black uppercase text-slate-500 dark:text-slate-400">{expired ? "Transfer Expired" : "Expires in"}</p>
+      <p className="mt-1 text-lg font-black">{countdownParts(expiresAt)}</p>
+    </div>
+  );
+}
+
+function looksLikeCode(text = "") {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if ((trimmed.startsWith("{") && trimmed.endsWith("}")) || (trimmed.startsWith("[") && trimmed.endsWith("]"))) return true;
+  return /[`{};=<>]|\b(function|const|let|var|import|export|SELECT|ERROR|WARN)\b/.test(trimmed);
+}
+
+function deviceLabel(device) {
+  return device?.label || "No activity yet";
 }
 
 function TransferDropzone({ files, setFiles }) {
@@ -127,10 +168,15 @@ export default function ConviTransfer() {
   const initialMode = params.get("mode") === "send" ? "send" : "receive";
   const [mode, setMode] = useState(transferId ? "receive" : initialMode);
   const [files, setFiles] = useState([]);
+  const [transferKind, setTransferKind] = useState("file");
   const [expiry, setExpiry] = useState("24h");
   const [password, setPassword] = useState("");
+  const [senderName, setSenderName] = useState("");
+  const [messageTitle, setMessageTitle] = useState("");
+  const [textContent, setTextContent] = useState("");
   const [receivePassword, setReceivePassword] = useState("");
   const [oneTimeDownload, setOneTimeDownload] = useState(false);
+  const [oneTimeView, setOneTimeView] = useState(false);
   const [accessKey, setAccessKey] = useState(params.get("key") || "");
   const [activeTransferId, setActiveTransferId] = useState(transferId || "");
   const [createdTransfer, setCreatedTransfer] = useState(null);
@@ -182,16 +228,25 @@ export default function ConviTransfer() {
 
   async function createNewTransfer(event) {
     event.preventDefault();
-    if (!files.length) {
+    if (transferKind === "file" && !files.length) {
       toast.error("Add at least one file");
+      return;
+    }
+    if (transferKind === "text" && !textContent.trim()) {
+      toast.error("Add text content");
       return;
     }
     setLoading(true);
     const formData = new FormData();
     files.forEach((file) => formData.append("files", file));
+    formData.append("transferType", transferKind);
+    formData.append("senderName", senderName);
+    formData.append("messageTitle", messageTitle);
+    formData.append("textContent", textContent);
     formData.append("expiry", expiry);
     formData.append("password", password);
     formData.append("oneTimeDownload", String(oneTimeDownload));
+    formData.append("oneTimeView", String(oneTimeView));
 
     try {
       const { data } = await api.post("/transfers", formData, {
@@ -203,6 +258,8 @@ export default function ConviTransfer() {
       setAccessKey(data.transfer.accessKey);
       setFiles([]);
       setPassword("");
+      setMessageTitle("");
+      setTextContent("");
       toast.success("Secure transfer generated");
       loadDashboard();
     } catch (error) {
@@ -253,6 +310,17 @@ export default function ConviTransfer() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function copyTransferText(mode) {
+    const text = verifiedTransfer?.text?.content || "";
+    if (!text) return;
+    const allText = [
+      verifiedTransfer.title,
+      verifiedTransfer.senderName ? `Shared by: ${verifiedTransfer.senderName}` : "",
+      text
+    ].filter(Boolean).join("\n\n");
+    await copyText(mode === "all" ? allText : text, mode === "all" ? "Text details" : "Text");
   }
 
   function toggleFavorite(transfer) {
@@ -394,7 +462,40 @@ export default function ConviTransfer() {
 
           {mode === "send" ? (
             <form onSubmit={createNewTransfer} className="mt-5 space-y-5">
-              <TransferDropzone files={files} setFiles={setFiles} />
+              <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
+                <button type="button" onClick={() => setTransferKind("file")} className={`focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition ${transferKind === "file" ? "bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white" : "text-slate-500"}`}>
+                  <FileArchive size={16} />
+                  File Transfer
+                </button>
+                <button type="button" onClick={() => setTransferKind("text")} className={`focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition ${transferKind === "text" ? "bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white" : "text-slate-500"}`}>
+                  <Type size={16} />
+                  Text Transfer
+                </button>
+              </div>
+              <label className="block">
+                <span className="text-sm font-black text-slate-700 dark:text-slate-200">Sender Name</span>
+                <input value={senderName} onChange={(event) => setSenderName(event.target.value)} placeholder="Optional" className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-950" />
+              </label>
+              {transferKind === "file" ? (
+                <TransferDropzone files={files} setFiles={setFiles} />
+              ) : (
+                <div className="space-y-4">
+                  <label className="block">
+                    <span className="text-sm font-black text-slate-700 dark:text-slate-200">Message Title</span>
+                    <input value={messageTitle} onChange={(event) => setMessageTitle(event.target.value)} placeholder="Optional title" className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-950" />
+                  </label>
+                  <label className="block">
+                    <span className="text-sm font-black text-slate-700 dark:text-slate-200">Text Content</span>
+                    <textarea
+                      value={textContent}
+                      onChange={(event) => setTextContent(event.target.value)}
+                      required={transferKind === "text"}
+                      placeholder="Paste notes, URLs, JSON, logs, or code snippets"
+                      className="focus-ring mt-2 min-h-56 w-full resize-y rounded-lg border border-slate-200 bg-white px-3 py-3 font-mono text-sm leading-6 dark:border-slate-800 dark:bg-slate-950"
+                    />
+                  </label>
+                </div>
+              )}
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="text-sm font-black text-slate-700 dark:text-slate-200">Expiry Time</span>
@@ -409,17 +510,27 @@ export default function ConviTransfer() {
               </div>
               <label className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 p-4 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
                 <span>
-                  <span className="block text-sm font-black">One-Time Download</span>
-                  <span className="mt-1 block text-xs text-slate-500">Delete files after the first successful download.</span>
+                  <span className="block text-sm font-black">{transferKind === "text" ? "One-Time View" : "One-Time Download"}</span>
+                  <span className="mt-1 block text-xs text-slate-500">{transferKind === "text" ? "Delete text after the first successful retrieval." : "Delete files after the first successful download."}</span>
                 </span>
-                <input type="checkbox" checked={oneTimeDownload} onChange={(event) => setOneTimeDownload(event.target.checked)} className="h-5 w-5 accent-brand-600" />
+                <input
+                  type="checkbox"
+                  checked={transferKind === "text" ? oneTimeView : oneTimeDownload}
+                  onChange={(event) => transferKind === "text" ? setOneTimeView(event.target.checked) : setOneTimeDownload(event.target.checked)}
+                  className="h-5 w-5 accent-brand-600"
+                />
               </label>
-              {files.length > 0 && (
+              {transferKind === "file" && files.length > 0 && (
                 <p className="rounded-lg bg-slate-950 px-4 py-3 text-sm font-bold text-brand-100 ring-1 ring-slate-800 dark:bg-slate-950 dark:text-brand-100 dark:ring-slate-800">
                   {files.length} file{files.length === 1 ? "" : "s"} selected - {formatBytes(totalSelectedSize)}
                 </p>
               )}
-              <Button type="submit" disabled={loading || !files.length} className="w-full">
+              {transferKind === "text" && textContent.trim() && (
+                <p className="rounded-lg bg-slate-950 px-4 py-3 text-sm font-bold text-brand-100 ring-1 ring-slate-800 dark:bg-slate-950 dark:text-brand-100 dark:ring-slate-800">
+                  Text selected - {formatBytes(new globalThis.Blob([textContent]).size)}
+                </p>
+              )}
+              <Button type="submit" disabled={loading || (transferKind === "file" ? !files.length : !textContent.trim())} className="w-full">
                 {loading ? <RefreshCw className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
                 Generate Secure Transfer
               </Button>
@@ -481,10 +592,13 @@ export default function ConviTransfer() {
                   <p className="text-xs font-black uppercase text-slate-500">Access Key</p>
                   <p className="mt-2 text-xl font-black tracking-normal">{createdTransfer.accessKey}</p>
                 </div>
-                <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-950">
-                  <p className="text-xs font-black uppercase text-slate-500">Expiry Date</p>
-                  <p className="mt-2 text-sm font-bold">{friendlyDate(createdTransfer.expiresAt)}</p>
-                </div>
+                <ExpiryCountdown expiresAt={createdTransfer.expiresAt} status={createdTransfer.status} />
+                {createdTransfer.senderName && (
+                  <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-950">
+                    <p className="text-xs font-black uppercase text-slate-500">Shared by</p>
+                    <p className="mt-2 text-sm font-bold">{createdTransfer.senderName}</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -510,25 +624,58 @@ export default function ConviTransfer() {
 
             {verifiedTransfer && (
               <div className="mt-5">
-                <div className="space-y-2">
-                  {verifiedTransfer.files.map((file) => (
-                    <div key={file.id} className="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
-                      <FileCheck2 className="text-brand-500" size={20} />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-bold">{file.name}</p>
-                        <p className="text-xs text-slate-500">{formatBytes(file.size)}</p>
-                      </div>
+                {verifiedTransfer.transferType === "text" ? (
+                  <div className="space-y-4">
+                    <div className="rounded-lg bg-slate-50 p-4 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
+                      {verifiedTransfer.title && <h3 className="text-lg font-black">{verifiedTransfer.title}</h3>}
+                      {verifiedTransfer.senderName && <p className="mt-1 text-sm font-bold text-brand-600 dark:text-brand-300">Shared by: {verifiedTransfer.senderName}</p>}
+                      <p className="mt-3 text-xs text-slate-500">Created {friendlyDate(verifiedTransfer.createdAt)} - Expires {friendlyDate(verifiedTransfer.expiresAt)}</p>
                     </div>
-                  ))}
+                    <pre className={`max-h-96 overflow-auto rounded-lg bg-slate-950 p-4 text-sm leading-6 text-slate-100 ring-1 ring-slate-800 ${looksLikeCode(verifiedTransfer.text?.content) ? "font-mono" : "font-sans whitespace-pre-wrap"}`}>
+                      <code>{verifiedTransfer.text?.content}</code>
+                    </pre>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Button type="button" variant="soft" onClick={() => copyTransferText("text")}>
+                        <Clipboard size={17} />
+                        Copy Text
+                      </Button>
+                      <Button type="button" variant="soft" onClick={() => copyTransferText("all")}>
+                        <Copy size={17} />
+                        Copy All
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      {verifiedTransfer.files.map((file) => (
+                        <div key={file.id} className="flex items-center gap-3 rounded-lg bg-slate-50 p-3 dark:bg-slate-950">
+                          <FileCheck2 className="text-brand-500" size={20} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-bold">{file.name}</p>
+                            <p className="text-xs text-slate-500">{formatBytes(file.size)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {verifiedTransfer.senderName && (
+                      <p className="mt-3 rounded-lg bg-slate-50 px-4 py-3 text-sm font-bold text-brand-600 dark:bg-slate-950 dark:text-brand-300">
+                        Shared by: {verifiedTransfer.senderName}
+                      </p>
+                    )}
+                    <div className="mt-4 grid gap-3 rounded-lg bg-slate-50 p-4 text-sm dark:bg-slate-950 sm:grid-cols-2">
+                      <p><span className="font-black">Uploaded:</span> {friendlyDate(verifiedTransfer.createdAt)}</p>
+                      <p><span className="font-black">Expires:</span> {friendlyDate(verifiedTransfer.expiresAt)}</p>
+                    </div>
+                    <Button type="button" onClick={downloadTransfer} disabled={loading || verifiedTransfer.status === "expired" || new Date(verifiedTransfer.expiresAt).getTime() <= Date.now()} className="mt-4 w-full">
+                      {loading ? <RefreshCw className="animate-spin" size={18} /> : <Download size={18} />}
+                      Download File{verifiedTransfer.files.length === 1 ? "" : "s"}
+                    </Button>
+                  </>
+                )}
+                <div className="mt-4">
+                  <ExpiryCountdown expiresAt={verifiedTransfer.expiresAt} status={verifiedTransfer.status} />
                 </div>
-                <div className="mt-4 grid gap-3 rounded-lg bg-slate-50 p-4 text-sm dark:bg-slate-950 sm:grid-cols-2">
-                  <p><span className="font-black">Uploaded:</span> {friendlyDate(verifiedTransfer.createdAt)}</p>
-                  <p><span className="font-black">Expires:</span> {friendlyDate(verifiedTransfer.expiresAt)}</p>
-                </div>
-                <Button type="button" onClick={downloadTransfer} disabled={loading || verifiedTransfer.status === "expired"} className="mt-4 w-full">
-                  {loading ? <RefreshCw className="animate-spin" size={18} /> : <Download size={18} />}
-                  Download File{verifiedTransfer.files.length === 1 ? "" : "s"}
-                </Button>
               </div>
             )}
           </motion.div>
@@ -573,12 +720,12 @@ export default function ConviTransfer() {
 
         {recentTransfers.length > 0 && (
           <div className="mt-6">
-            <h3 className="font-black">Recently shared files</h3>
+            <h3 className="font-black">Recently shared</h3>
             <div className="mt-3 grid gap-3 md:grid-cols-3">
               {recentTransfers.map((transfer) => (
                 <button key={transfer.transferId} onClick={() => { setMode("receive"); setActiveTransferId(transfer.transferId); }} className="rounded-lg bg-white p-4 text-left ring-1 ring-slate-200 transition hover:-translate-y-0.5 hover:shadow-soft dark:bg-slate-900 dark:ring-slate-800">
-                  <p className="font-black">{transfer.files[0]?.name || transfer.transferId}</p>
-                  <p className="mt-1 text-xs text-slate-500">{transfer.files.length} file{transfer.files.length === 1 ? "" : "s"} - {friendlyDate(transfer.createdAt)}</p>
+                  <p className="font-black">{transfer.transferType === "text" ? transfer.title || "Text Transfer" : transfer.files[0]?.name || transfer.transferId}</p>
+                  <p className="mt-1 text-xs text-slate-500">{transfer.transferType === "text" ? "Text" : `${transfer.files.length} file${transfer.files.length === 1 ? "" : "s"}`} - {friendlyDate(transfer.createdAt)}</p>
                 </button>
               ))}
             </div>
@@ -589,35 +736,61 @@ export default function ConviTransfer() {
           {dashboardLoading ? (
             <div className="h-32 animate-pulse bg-slate-100 dark:bg-slate-800" />
           ) : dashboard.transfers.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-sm">
-                <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-950">
-                  <tr>
-                    <th className="px-4 py-3">File Name</th>
-                    <th className="px-4 py-3">Transfer ID</th>
-                    <th className="px-4 py-3">Created Date</th>
-                    <th className="px-4 py-3">Expiry Date</th>
-                    <th className="px-4 py-3">Status</th>
-                    <th className="px-4 py-3">Favorite</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
-                  {dashboard.transfers.map((transfer) => (
-                    <tr key={transfer.transferId}>
-                      <td className="px-4 py-4 font-bold">{transfer.files[0]?.name || "Shared files"}</td>
-                      <td className="px-4 py-4">{transfer.transferId}</td>
-                      <td className="px-4 py-4">{friendlyDate(transfer.createdAt)}</td>
-                      <td className="px-4 py-4">{friendlyDate(transfer.expiresAt)}</td>
-                      <td className="px-4 py-4"><StatusPill status={transfer.status} /></td>
-                      <td className="px-4 py-4">
-                        <Button type="button" variant="ghost" onClick={() => toggleFavorite(transfer)} title="Favorite transfer">
-                          <Heart size={17} className={favorites.includes(transfer.transferId) ? "fill-coral text-coral" : ""} />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid gap-4 p-4 lg:grid-cols-2">
+              {dashboard.transfers.map((transfer) => (
+                <motion.article
+                  key={transfer.transferId}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="rounded-lg bg-slate-50 p-4 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate text-lg font-black text-slate-950 dark:text-white">
+                        {transfer.transferType === "text" ? transfer.title || "Text Transfer" : transfer.files[0]?.name || "Shared files"}
+                      </p>
+                      <p className="mt-1 text-xs font-bold uppercase text-slate-500">{transfer.transferType === "text" ? "Text Transfer" : "File Transfer"}</p>
+                    </div>
+                    <Button type="button" variant="ghost" onClick={() => toggleFavorite(transfer)} title="Favorite transfer">
+                      <Heart size={17} className={favorites.includes(transfer.transferId) ? "fill-coral text-coral" : ""} />
+                    </Button>
+                  </div>
+
+                  <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                    <div><p className="text-xs font-black uppercase text-slate-500">Transfer ID</p><p className="mt-1 font-bold">{transfer.transferId}</p></div>
+                    <div><p className="text-xs font-black uppercase text-slate-500">Access Key</p><p className="mt-1 font-bold">{transfer.accessKey || "Available for new transfers"}</p></div>
+                    <div><p className="text-xs font-black uppercase text-slate-500">Views</p><p className="mt-1 font-bold">{transfer.viewCount || 0}</p></div>
+                    <div><p className="text-xs font-black uppercase text-slate-500">Downloads</p><p className="mt-1 font-bold">{transfer.downloadCount || 0}</p></div>
+                    <div><p className="text-xs font-black uppercase text-slate-500">Last Viewed</p><p className="mt-1 font-bold">{deviceLabel(transfer.lastViewedDevice)}</p></div>
+                    <div><p className="text-xs font-black uppercase text-slate-500">Last Download</p><p className="mt-1 font-bold">{deviceLabel(transfer.lastDownloadedDevice)}</p></div>
+                    <div><p className="text-xs font-black uppercase text-slate-500">Created</p><p className="mt-1 font-bold">{friendlyDate(transfer.createdAt)}</p></div>
+                    {transfer.senderName && <div><p className="text-xs font-black uppercase text-slate-500">Shared by</p><p className="mt-1 font-bold">{transfer.senderName}</p></div>}
+                  </div>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                    <div className="space-y-2 rounded-lg bg-white p-3 ring-1 ring-slate-200 dark:bg-slate-900 dark:ring-slate-800">
+                      {["uploaded", "viewed", "downloaded", "expired"].map((status) => {
+                        const item = transfer.events?.find((event) => event.status === status);
+                        return (
+                          <div key={status} className="flex items-center justify-between gap-3 text-sm">
+                            <span className="inline-flex items-center gap-2 font-bold capitalize">
+                              <CheckCircle2 size={15} className={item ? "text-brand-500" : "text-slate-300"} />
+                              {status}
+                            </span>
+                            <span className="text-xs text-slate-500">{item ? eventTime(item.at) : "-"}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="min-w-40">
+                      <StatusPill status={transfer.status} />
+                      <div className="mt-3">
+                        <ExpiryCountdown expiresAt={transfer.expiresAt} status={transfer.status} />
+                      </div>
+                    </div>
+                  </div>
+                </motion.article>
+              ))}
             </div>
           ) : (
             <div className="py-14 text-center">

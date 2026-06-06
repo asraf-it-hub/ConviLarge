@@ -57,8 +57,25 @@ function transferUrl(transferId, accessKey) {
   return `${base}/transfer/${transferId}?key=${encodeURIComponent(accessKey)}`;
 }
 
-function event(status, label, at = new Date()) {
-  return { status, label, at };
+function parseDevice(req) {
+  const ua = String(req.headers["user-agent"] || "");
+  const browser = /Edg\//.test(ua) ? "Edge"
+    : /Firefox\//.test(ua) ? "Firefox"
+      : /Chrome\//.test(ua) && !/Edg\//.test(ua) ? "Chrome"
+        : /Safari\//.test(ua) && !/Chrome\//.test(ua) ? "Safari"
+          : "Unknown";
+  const os = /Android/.test(ua) ? "Android"
+    : /iPhone|iPad|iPod/.test(ua) ? "iOS"
+      : /Windows/.test(ua) ? "Windows"
+        : /Mac OS X|Macintosh/.test(ua) ? "macOS"
+          : /Linux/.test(ua) ? "Linux"
+            : "Unknown";
+  const type = /iPad|Tablet/.test(ua) ? "Tablet" : /Mobi|Android|iPhone/.test(ua) ? "Mobile" : "Desktop";
+  return { type, browser, os, label: `${browser} on ${os}` };
+}
+
+function event(status, label, at = new Date(), device = null) {
+  return { status, label, at, ...(device ? { device } : {}) };
 }
 
 function isExpired(transfer) {
@@ -83,18 +100,35 @@ function publicFile(file) {
 }
 
 export function publicTransfer(transfer, extras = {}) {
+  const text = transfer.transferType === "text"
+    ? {
+        title: transfer.messageTitle || "",
+        senderName: transfer.senderName || "",
+        content: extras.includeText ? transfer.textContent || "" : "",
+        size: Buffer.byteLength(transfer.textContent || "", "utf8")
+      }
+    : null;
   return {
     transferId: transfer.transferId,
-    files: transfer.files.map(publicFile),
+    transferType: transfer.transferType || "file",
+    senderName: transfer.senderName || "",
+    title: transfer.messageTitle || "",
+    text,
+    files: (transfer.files || []).map(publicFile),
     status: transfer.status,
+    accessKey: transfer.accessKeyDisplay || extras.accessKey,
     oneTimeDownload: transfer.oneTimeDownload,
+    oneTimeView: transfer.oneTimeView,
     passwordRequired: Boolean(transfer.passwordHash),
     createdAt: transfer.createdAt,
     expiresAt: transfer.expiresAt,
     viewedAt: transfer.viewedAt,
     downloadedAt: transfer.downloadedAt,
     expiredAt: transfer.expiredAt,
+    viewCount: transfer.viewCount || 0,
     downloadCount: transfer.downloadCount || 0,
+    lastViewedDevice: transfer.lastViewedDevice || null,
+    lastDownloadedDevice: transfer.lastDownloadedDevice || null,
     events: transfer.events || [],
     ...extras
   };
@@ -116,8 +150,10 @@ async function uniqueAccessKey() {
   throw new AppError("Could not generate an access key", 500);
 }
 
-export async function createTransfer({ req, files, expiry = "24h", password = "", oneTimeDownload = false }) {
-  if (!files.length) throw new AppError("Add at least one file to share");
+export async function createTransfer({ req, files, expiry = "24h", password = "", oneTimeDownload = false, transferType = "file", senderName = "", messageTitle = "", textContent = "", oneTimeView = false }) {
+  const isText = transferType === "text";
+  if (!isText && !files.length) throw new AppError("Add at least one file to share");
+  if (isText && !String(textContent || "").trim()) throw new AppError("Add text content to share");
   if (!EXPIRY_OPTIONS[expiry]) throw new AppError("Choose a valid expiry time");
 
   const transferId = await uniqueTransferId();
@@ -129,8 +165,13 @@ export async function createTransfer({ req, files, expiry = "24h", password = ""
   const transfer = await createTransferRecord({
     transferId,
     accessKeyHash: hashAccessKey(accessKey),
+    accessKeyDisplay: accessKey,
     passwordHash: password ? await bcrypt.hash(password, 12) : "",
-    files: files.map((file) => ({
+    transferType: isText ? "text" : "file",
+    senderName: String(senderName || "").trim().slice(0, 80),
+    messageTitle: String(messageTitle || "").trim().slice(0, 120),
+    textContent: isText ? String(textContent || "").slice(0, 250000) : "",
+    files: isText ? [] : files.map((file) => ({
       id: crypto.randomUUID(),
       originalName: file.originalname,
       filename: file.filename,
@@ -139,8 +180,9 @@ export async function createTransfer({ req, files, expiry = "24h", password = ""
       size: file.size
     })),
     oneTimeDownload: oneTimeDownload === true || oneTimeDownload === "true",
+    oneTimeView: oneTimeView === true || oneTimeView === "true",
     expiresAt: new Date(now.getTime() + EXPIRY_OPTIONS[expiry]),
-    events: [event("uploaded", "Upload Complete", now)],
+    events: [event("uploaded", isText ? "Text Transfer Created" : "Upload Complete", now)],
     ...ownerPayload(req)
   });
 
@@ -178,24 +220,34 @@ async function authenticateTransfer({ transfer, accessKey, password }) {
 }
 
 export async function verifyTransfer({ transferId, accessKey, password }) {
+  return verifyTransferWithRequest({ transferId, accessKey, password, req: null });
+}
+
+export async function verifyTransferWithRequest({ transferId, accessKey, password, req }) {
   const transfer = await getTransferById(transferId);
   await assertTransferOpen(transfer);
   await authenticateTransfer({ transfer, accessKey, password });
+  if (transfer.transferType === "text") {
+    return retrieveTextTransfer({ req, transferId, accessKey, password });
+  }
 
   const now = new Date();
-  const nextEvents = transfer.viewedAt ? transfer.events : [...(transfer.events || []), event("viewed", "Transfer Opened", now)];
+  const device = req ? parseDevice(req) : null;
+  const nextEvents = [...(transfer.events || []), event("viewed", "Transfer Opened", now, device)];
   const updated = await updateTransferRecord(transfer.transferId, {
     status: transfer.status === "downloaded" ? "downloaded" : "viewed",
     viewedAt: transfer.viewedAt || now,
+    viewCount: (transfer.viewCount || 0) + 1,
+    ...(device ? { lastViewedDevice: device } : {}),
     events: nextEvents
   });
-  return publicTransfer(updated);
+  return publicTransfer(updated, { includeText: updated.transferType === "text" });
 }
 
-export async function lookupTransfer({ accessKey, password }) {
+export async function lookupTransfer({ accessKey, password, req = null }) {
   const transfer = await getTransferByAccessKeyHash(hashAccessKey(accessKey));
   await assertTransferOpen(transfer);
-  return verifyTransfer({ transferId: transfer.transferId, accessKey, password });
+  return verifyTransferWithRequest({ transferId: transfer.transferId, accessKey, password, req });
 }
 
 export async function getTransferShell(transferId) {
@@ -205,27 +257,65 @@ export async function getTransferShell(transferId) {
     const expired = await expireTransfer(transfer);
     return publicTransfer(expired);
   }
-  return publicTransfer(transfer, { files: [], passwordRequired: Boolean(transfer.passwordHash) });
+  return publicTransfer(transfer, { files: [], passwordRequired: Boolean(transfer.passwordHash), includeText: false });
+}
+
+export async function retrieveTextTransfer({ req, transferId, accessKey, password }) {
+  const transfer = await getTransferById(transferId);
+  await assertTransferOpen(transfer);
+  await authenticateTransfer({ transfer, accessKey, password });
+  if (transfer.transferType !== "text") throw new AppError("This transfer does not contain text", 400);
+
+  const now = new Date();
+  const device = parseDevice(req);
+  const patch = {
+    status: "downloaded",
+    viewedAt: transfer.viewedAt || now,
+    downloadedAt: now,
+    viewCount: transfer.viewedAt ? transfer.viewCount || 0 : (transfer.viewCount || 0) + 1,
+    downloadCount: (transfer.downloadCount || 0) + 1,
+    lastViewedDevice: transfer.lastViewedDevice || device,
+    lastDownloadedDevice: device,
+    events: [
+      ...(transfer.events || []),
+      ...(transfer.viewedAt ? [] : [event("viewed", "Transfer Opened", now, device)]),
+      event("downloaded", "Text Retrieved", now, device)
+    ]
+  };
+  if (transfer.oneTimeView) {
+    patch.deletedAt = now;
+    patch.expiredAt = now;
+    patch.status = "expired";
+    patch.events.push(event("expired", "One-Time Text Transfer Deleted", now));
+  }
+
+  const updated = await updateTransferRecord(transfer.transferId, patch);
+  return publicTransfer(updated, { includeText: true });
 }
 
 export async function sendTransferDownload({ req, res, transferId, accessKey, password }) {
   const transfer = await getTransferById(transferId);
   await assertTransferOpen(transfer);
   await authenticateTransfer({ transfer, accessKey, password });
+  if (transfer.transferType === "text") throw new AppError("Use text retrieval for this transfer", 400);
 
   const missingFile = transfer.files.find((file) => !fs.existsSync(file.path));
   if (missingFile) throw new AppError("Files are no longer available", 410);
 
   const now = new Date();
+  const device = parseDevice(req);
   await updateTransferRecord(transfer.transferId, {
     status: "downloaded",
     viewedAt: transfer.viewedAt || now,
     downloadedAt: now,
+    viewCount: transfer.viewedAt ? transfer.viewCount || 0 : (transfer.viewCount || 0) + 1,
     downloadCount: (transfer.downloadCount || 0) + 1,
+    lastViewedDevice: transfer.lastViewedDevice || device,
+    lastDownloadedDevice: device,
     events: [
       ...(transfer.events || []),
-      ...(transfer.viewedAt ? [] : [event("viewed", "Transfer Opened", now)]),
-      event("downloaded", "Download Started", now)
+      ...(transfer.viewedAt ? [] : [event("viewed", "Transfer Opened", now, device)]),
+      event("downloaded", "Download Started", now, device)
     ]
   });
 
@@ -279,10 +369,11 @@ export async function getTransferDashboard(req) {
   const stats = normalized.reduce((summary, transfer) => {
     summary.totalTransfers += 1;
     summary.filesShared += transfer.files?.length || 0;
+    summary.textTransfers += transfer.transferType === "text" ? 1 : 0;
     summary.downloads += transfer.downloadCount || 0;
     if (transfer.status === "expired") summary.expiredTransfers += 1;
     return summary;
-  }, { totalTransfers: 0, filesShared: 0, downloads: 0, expiredTransfers: 0 });
+  }, { totalTransfers: 0, filesShared: 0, textTransfers: 0, downloads: 0, expiredTransfers: 0 });
 
   return {
     stats,

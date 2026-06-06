@@ -16,7 +16,8 @@ const transferEventSchema = new mongoose.Schema(
   {
     status: String,
     label: String,
-    at: Date
+    at: Date,
+    device: mongoose.Schema.Types.Mixed
   },
   { _id: false }
 );
@@ -25,10 +26,16 @@ const secureTransferSchema = new mongoose.Schema(
   {
     transferId: { type: String, unique: true, index: true },
     accessKeyHash: { type: String, required: true, index: true },
+    accessKeyDisplay: String,
     passwordHash: String,
+    transferType: { type: String, enum: ["file", "text"], default: "file", index: true },
+    senderName: String,
+    messageTitle: String,
+    textContent: String,
     files: [transferFileSchema],
     status: { type: String, enum: ["uploaded", "viewed", "downloaded", "expired"], default: "uploaded" },
     oneTimeDownload: { type: Boolean, default: false },
+    oneTimeView: { type: Boolean, default: false },
     ownerUser: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: false },
     ownerSession: String,
     viewedAt: Date,
@@ -36,7 +43,10 @@ const secureTransferSchema = new mongoose.Schema(
     expiredAt: Date,
     expiresAt: { type: Date, required: true, index: true },
     events: [transferEventSchema],
+    viewCount: { type: Number, default: 0 },
     downloadCount: { type: Number, default: 0 },
+    lastViewedDevice: mongoose.Schema.Types.Mixed,
+    lastDownloadedDevice: mongoose.Schema.Types.Mixed,
     deletedAt: Date
   },
   { timestamps: true }

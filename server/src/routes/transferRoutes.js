@@ -6,6 +6,7 @@ import {
   createSecureTransfer,
   downloadSecureTransfer,
   lookupSecureTransfer,
+  retrieveSecureTextTransfer,
   secureTransferDashboard,
   transferShell,
   verifySecureTransfer
@@ -34,3 +35,4 @@ transferRoutes.post("/lookup", transferAccessLimiter, asyncHandler(lookupSecureT
 transferRoutes.get("/:transferId", asyncHandler(transferShell));
 transferRoutes.post("/:transferId/verify", transferAccessLimiter, asyncHandler(verifySecureTransfer));
 transferRoutes.post("/:transferId/download", transferAccessLimiter, asyncHandler(downloadSecureTransfer));
+transferRoutes.post("/:transferId/text", transferAccessLimiter, asyncHandler(retrieveSecureTextTransfer));
