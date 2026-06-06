@@ -11,6 +11,7 @@ import {
   FileText,
   FileType2,
   FileVideo,
+  KeyRound,
   MessageSquareText,
   ImageDown,
   Images,
@@ -23,6 +24,7 @@ import {
   ShieldCheck,
   Shrink,
   Sparkles,
+  Send,
   Table2,
   TextSearch
 } from "lucide-react";
@@ -67,6 +69,11 @@ export const categoryMeta = {
     label: "AI Tools",
     title: "AI Tools",
     summary: "Summarize, analyze, extract, and understand files with configurable AI providers."
+  },
+  transfer: {
+    label: "ConviTransfer",
+    title: "ConviTransfer",
+    summary: "Share files securely with access keys, QR codes, expiry controls, and one-time downloads."
   }
 };
 
@@ -84,7 +91,7 @@ function tool({ id, category, name, description, keywords, ...rest }) {
     title: name,
     description,
     category,
-    route: dedicatedSecurityRoutes[id] || `/${category}?tool=${id}`,
+    route: rest.route || dedicatedSecurityRoutes[id] || `/${category}?tool=${id}`,
     keywords,
     ...rest
   };
@@ -131,7 +138,9 @@ export const toolCatalog = [
   tool({ id: "ai-background-remover", category: "ai", name: "AI Background Remover", description: "Remove image backgrounds, preview before and after, and export transparent PNGs.", keywords: ["ai", "image", "background", "remove", "transparent", "png"], icon: PaintBucket, accept: "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp", maxFiles: 20 }),
   tool({ id: "ai-image-upscaler", category: "ai", name: "AI Image Upscaler", description: "Upscale images to 2x, 4x, or 8x with detail-preserving enhancement.", keywords: ["ai", "image", "upscale", "enhance", "resolution"], icon: ImageDown, accept: "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp", maxFiles: 20 }),
   tool({ id: "ai-image-enhancer", category: "ai", name: "AI Image Enhancer", description: "Improve sharpness, noise, brightness, contrast, color, faces, and old photos.", keywords: ["ai", "image", "enhance", "restore", "sharpen", "noise"], icon: Sparkles, accept: "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp", maxFiles: 20 }),
-  tool({ id: "ai-pdf-quiz-generator", category: "ai", name: "AI PDF to Quiz Generator", description: "Generate interactive quizzes, answer keys, and export files from PDFs.", keywords: ["ai", "pdf", "quiz", "questions", "mcq", "study"], icon: BrainCircuit, accept: "application/pdf,.pdf", maxFiles: 1 })
+  tool({ id: "ai-pdf-quiz-generator", category: "ai", name: "AI PDF to Quiz Generator", description: "Generate interactive quizzes, answer keys, and export files from PDFs.", keywords: ["ai", "pdf", "quiz", "questions", "mcq", "study"], icon: BrainCircuit, accept: "application/pdf,.pdf", maxFiles: 1 }),
+  tool({ id: "transfer-send", category: "transfer", name: "Send Files", description: "Upload files, create a secure access key, and share by link or QR code.", keywords: ["transfer", "send", "share", "qr", "key"], icon: Send, accept: "*", maxFiles: 50, route: "/transfer?mode=send" }),
+  tool({ id: "transfer-receive", category: "transfer", name: "Receive Files", description: "Open a secure transfer with an access key, password, or scanned QR code.", keywords: ["transfer", "receive", "download", "qr", "key"], icon: KeyRound, accept: "*", maxFiles: 1, route: "/transfer?mode=receive" })
 ];
 
 export function toolsFor(category) {

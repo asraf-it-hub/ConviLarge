@@ -15,6 +15,7 @@ const ToolCategory = lazy(() => import("./pages/ToolCategory.jsx"));
 const AuthPage = lazy(() => import("./pages/AuthPage.jsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
 const Admin = lazy(() => import("./pages/Admin.jsx"));
+const ConviTransfer = lazy(() => import("./pages/ConviTransfer.jsx"));
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -29,6 +30,22 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                 element={
                   <Suspense fallback={<SkeletonPage />}>
                     <Home />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/transfer"
+                element={
+                  <Suspense fallback={<SkeletonPage />}>
+                    <ConviTransfer />
+                  </Suspense>
+                }
+              />
+              <Route
+                path="/transfer/:transferId"
+                element={
+                  <Suspense fallback={<SkeletonPage />}>
+                    <ConviTransfer />
                   </Suspense>
                 }
               />

@@ -2,6 +2,7 @@ import fs from "fs/promises";
 import path from "path";
 import { env, paths } from "../config/env.js";
 import { removeFile } from "../utils/fs.js";
+import { cleanupExpiredTransfers } from "./transferService.js";
 
 async function cleanupDir(dir) {
   const now = Date.now();
@@ -23,12 +24,20 @@ async function cleanupDir(dir) {
 }
 
 export async function cleanupExpiredFiles() {
-  const [uploads, temp, processed] = await Promise.all([
+  const [uploads, temp, processed, transfers] = await Promise.all([
     cleanupDir(paths.uploads),
     cleanupDir(paths.temp),
-    cleanupDir(paths.processed)
+    cleanupDir(paths.processed),
+    cleanupExpiredTransfers()
   ]);
-  return { deleted: uploads + temp + processed, uploads, temp, processed };
+  return {
+    deleted: uploads + temp + processed + transfers.files,
+    uploads,
+    temp,
+    processed,
+    transfers: transfers.files,
+    expiredTransfers: transfers.transfers
+  };
 }
 
 export function startCleanupJob() {

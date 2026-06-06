@@ -20,6 +20,8 @@ export const env = {
   redisUrl: process.env.REDIS_URL || "",
   maxFileSizeMb: Number(process.env.MAX_FILE_SIZE_MB || 250),
   fileTtlHours: Number(process.env.FILE_TTL_HOURS || 24),
+  transferMaxFiles: Number(process.env.TRANSFER_MAX_FILES || 50),
+  transferMaxFileSizeMb: Number(process.env.TRANSFER_MAX_FILE_MB || process.env.MAX_FILE_SIZE_MB || 250),
   qpdfPath: process.env.QPDF_PATH || "qpdf",
   aiEnabled: process.env.AI_ENABLED !== "false",
   aiDefaultProvider: process.env.AI_DEFAULT_PROVIDER || "openrouter",
@@ -42,5 +44,6 @@ export const env = {
 export const paths = {
   uploads: path.join(rootDir, "uploads"),
   temp: path.join(rootDir, "temp"),
-  processed: path.join(rootDir, "processed")
+  processed: path.join(rootDir, "processed"),
+  transfers: path.join(rootDir, "transfers")
 };

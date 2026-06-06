@@ -21,6 +21,7 @@ export default function ToolCategory() {
   const selected = tools.find((tool) => tool.id === selectedId) || tools[0];
 
   if (!meta) return <Navigate to="/" replace />;
+  if (category === "transfer") return <Navigate to="/transfer" replace />;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
