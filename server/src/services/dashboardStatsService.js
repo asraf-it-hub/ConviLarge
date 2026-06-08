@@ -3,6 +3,9 @@ import { dbState } from "../config/db.js";
 import { ConversionJob } from "../models/ConversionJob.js";
 import { listMemoryJobs } from "./jobStore.js";
 import { tools } from "./toolRegistry.js";
+import { AiTask } from "../ai/models/AiTask.js";
+import { listMemoryAiTasks } from "../ai/services/aiTaskStore.js";
+import { aiTools } from "../ai/config/aiTools.js";
 
 const STATS_CACHE_MS = 60 * 1000;
 const statsCache = new Map();
@@ -12,7 +15,7 @@ function normalizeUserId(userId) {
 }
 
 function toolName(toolType) {
-  return tools[toolType]?.title || toolType || null;
+  return tools[toolType]?.title || aiTools[toolType]?.title || toolType || null;
 }
 
 function emptyStats() {
@@ -61,34 +64,73 @@ async function getMongoStats(userId) {
     ? new mongoose.Types.ObjectId(normalizedUserId)
     : userId;
 
-  const [result] = await ConversionJob.aggregate([
-    { $match: { user: mongoUserId, status: "completed" } },
-    {
-      $facet: {
-        usage: [
-          { $group: { _id: "$toolType", count: { $sum: 1 } } },
-          { $sort: { count: -1, _id: 1 } },
-          { $limit: 1 },
-          { $project: { _id: 0, toolType: "$_id", count: 1 } }
-        ],
-        last: [
-          { $sort: { updatedAt: -1 } },
-          { $limit: 1 },
-          { $project: { _id: 0, toolType: 1, completedAt: "$updatedAt" } }
-        ]
-      }
-    }
+  const [jobCounts, aiCounts] = await Promise.all([
+    ConversionJob.aggregate([
+      { $match: { user: mongoUserId, status: "completed" } },
+      { $group: { _id: "$toolType", count: { $sum: 1 } } }
+    ]),
+    AiTask.aggregate([
+      { $match: { user: mongoUserId, status: "completed" } },
+      { $group: { _id: "$toolType", count: { $sum: 1 } } }
+    ])
   ]);
 
+  const [lastJob, lastAi] = await Promise.all([
+    ConversionJob.findOne({ user: mongoUserId, status: "completed" })
+      .sort({ updatedAt: -1 })
+      .select("toolType updatedAt"),
+    AiTask.findOne({ user: mongoUserId, status: "completed" })
+      .sort({ updatedAt: -1 })
+      .select("toolType updatedAt")
+  ]);
+
+  // Combine counts
+  const toolCounts = {};
+  for (const item of jobCounts) {
+    toolCounts[item._id] = (toolCounts[item._id] || 0) + item.count;
+  }
+  for (const item of aiCounts) {
+    toolCounts[item._id] = (toolCounts[item._id] || 0) + item.count;
+  }
+
+  let mostUsed = null;
+  for (const [toolType, count] of Object.entries(toolCounts)) {
+    if (!mostUsed || count > mostUsed.count || (count === mostUsed.count && toolType < mostUsed.toolType)) {
+      mostUsed = { toolType, count };
+    }
+  }
+
+  // Determine last activity
+  let lastActivity = null;
+  const lastJobTime = lastJob ? new Date(lastJob.updatedAt).getTime() : 0;
+  const lastAiTime = lastAi ? new Date(lastAi.updatedAt).getTime() : 0;
+
+  if (lastJobTime || lastAiTime) {
+    if (lastJobTime >= lastAiTime) {
+      lastActivity = {
+        toolType: lastJob.toolType,
+        completedAt: lastJob.updatedAt
+      };
+    } else {
+      lastActivity = {
+        toolType: lastAi.toolType,
+        completedAt: lastAi.updatedAt
+      };
+    }
+  }
+
   return buildStats({
-    mostUsed: result?.usage?.[0] || null,
-    lastActivity: result?.last?.[0] || null
+    mostUsed,
+    lastActivity
   });
 }
 
 function getMemoryStats(userId) {
   const normalizedUserId = normalizeUserId(userId);
-  const completedJobs = listMemoryJobs().filter((job) => (
+  const completedJobs = [
+    ...listMemoryJobs(),
+    ...listMemoryAiTasks()
+  ].filter((job) => (
     job.status === "completed" && normalizeUserId(job.user) === normalizedUserId
   ));
 

@@ -88,17 +88,18 @@ function countdownParts(expiresAt) {
   return `${String(minutes).padStart(2, "0")}m ${String(seconds).padStart(2, "0")}s`;
 }
 
-function ExpiryCountdown({ expiresAt, status }) {
+function ExpiryCountdown({ expiresAt, status, deletedAt }) {
   const [, setTick] = useState(0);
   useEffect(() => {
     const timer = globalThis.setInterval(() => setTick((value) => value + 1), 1000);
     return () => globalThis.clearInterval(timer);
   }, []);
-  const expired = status === "expired" || new Date(expiresAt).getTime() <= Date.now();
+  const expired = new Date(expiresAt).getTime() <= Date.now();
+  const unavailable = Boolean(deletedAt) && !expired;
   return (
-    <div className={`rounded-lg px-4 py-3 ring-1 ${expired ? "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-200 dark:ring-rose-900" : "bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-950 dark:text-slate-200 dark:ring-slate-800"}`}>
-      <p className="text-xs font-black uppercase text-slate-500 dark:text-slate-400">{expired ? "Transfer Expired" : "Expires in"}</p>
-      <p className="mt-1 text-lg font-black">{countdownParts(expiresAt)}</p>
+    <div className={`rounded-lg px-4 py-3 ring-1 ${expired ? "bg-rose-50 text-rose-700 ring-rose-200 dark:bg-rose-950/40 dark:text-rose-200 dark:ring-rose-900" : unavailable ? "bg-amber-50 text-amber-800 ring-amber-200 dark:bg-amber-950/35 dark:text-amber-100 dark:ring-amber-900" : "bg-slate-50 text-slate-700 ring-slate-200 dark:bg-slate-950 dark:text-slate-200 dark:ring-slate-800"}`}>
+      <p className="text-xs font-black uppercase text-slate-500 dark:text-slate-400">{expired ? "Transfer Expired" : unavailable ? "One-time transfer used" : "Expires in"}</p>
+      <p className="mt-1 text-lg font-black">{unavailable ? "No longer available" : countdownParts(expiresAt)}</p>
     </div>
   );
 }
@@ -165,7 +166,7 @@ function TransferDropzone({ files, setFiles }) {
 export default function ConviTransfer() {
   const { transferId } = useParams();
   const [params, setParams] = useSearchParams();
-  const initialMode = params.get("mode") === "send" ? "send" : "receive";
+  const initialMode = params.get("mode") === "receive" ? "receive" : "send";
   const [mode, setMode] = useState(transferId ? "receive" : initialMode);
   const [files, setFiles] = useState([]);
   const [transferKind, setTransferKind] = useState("file");
@@ -461,7 +462,9 @@ export default function ConviTransfer() {
           </div>
 
           {mode === "send" ? (
-            <form onSubmit={createNewTransfer} className="mt-5 space-y-5">
+            <form onSubmit={createNewTransfer} className="mt-5 space-y-5" autoComplete="off">
+              <input type="text" name="prevent_autofill_username_send" style={{ position: "absolute", top: -1000, left: -1000, width: 0, height: 0, opacity: 0, pointerEvents: "none" }} tabIndex="-1" autoComplete="username" />
+              <input type="password" name="prevent_autofill_password_send" style={{ position: "absolute", top: -1000, left: -1000, width: 0, height: 0, opacity: 0, pointerEvents: "none" }} tabIndex="-1" autoComplete="new-password" />
               <div className="grid grid-cols-2 gap-2 rounded-lg bg-slate-100 p-1 dark:bg-slate-950">
                 <button type="button" onClick={() => setTransferKind("file")} className={`focus-ring inline-flex h-10 items-center justify-center gap-2 rounded-lg text-sm font-black transition ${transferKind === "file" ? "bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white" : "text-slate-500"}`}>
                   <FileArchive size={16} />
@@ -505,7 +508,15 @@ export default function ConviTransfer() {
                 </label>
                 <label className="block">
                   <span className="text-sm font-black text-slate-700 dark:text-slate-200">Optional Password</span>
-                  <input value={password} onChange={(event) => setPassword(event.target.value)} type="password" placeholder="Add password protection" className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-950" />
+                  <input
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    type="password"
+                    placeholder="Add password protection"
+                    className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-950"
+                    readOnly
+                    onFocus={(e) => e.target.removeAttribute("readonly")}
+                  />
                 </label>
               </div>
               <label className="flex items-center justify-between gap-4 rounded-lg bg-slate-50 p-4 ring-1 ring-slate-200 dark:bg-slate-950 dark:ring-slate-800">
@@ -536,20 +547,59 @@ export default function ConviTransfer() {
               </Button>
             </form>
           ) : (
-            <form onSubmit={verifyExistingTransfer} className="mt-5 space-y-4">
+            <form onSubmit={verifyExistingTransfer} className="mt-5 space-y-4" autoComplete="off">
+              {/* Dummy inputs to intercept browser autofill */}
+              <input type="text" name="prevent_autofill_username_receive" style={{ position: "absolute", top: -1000, left: -1000, width: 0, height: 0, opacity: 0, pointerEvents: "none" }} tabIndex="-1" autoComplete="username" />
+              <input type="password" name="prevent_autofill_password_receive" style={{ position: "absolute", top: -1000, left: -1000, width: 0, height: 0, opacity: 0, pointerEvents: "none" }} tabIndex="-1" autoComplete="current-password" />
               <div className="grid gap-4 md:grid-cols-2">
                 <label className="block">
                   <span className="text-sm font-black text-slate-700 dark:text-slate-200">Transfer ID</span>
-                  <input value={activeTransferId} onChange={(event) => setActiveTransferId(event.target.value.toUpperCase())} placeholder="TRX-7A9K3P" className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold uppercase dark:border-slate-800 dark:bg-slate-950" />
+                  <input
+                    name="convilarge-transfer-id"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="characters"
+                    spellCheck="false"
+                    value={activeTransferId}
+                    onChange={(event) => setActiveTransferId(event.target.value.toUpperCase())}
+                    placeholder="TRX-7A9K3P"
+                    className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold uppercase dark:border-slate-800 dark:bg-slate-950"
+                    readOnly
+                    onFocus={(e) => e.target.removeAttribute("readonly")}
+                  />
                 </label>
                 <label className="block">
                   <span className="text-sm font-black text-slate-700 dark:text-slate-200">Access Key</span>
-                  <input value={accessKey} onChange={(event) => setAccessKey(event.target.value.toUpperCase())} placeholder="Q8L2-MX7P" className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold uppercase dark:border-slate-800 dark:bg-slate-950" />
+                  <input
+                    name="convilarge-access-key"
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="characters"
+                    spellCheck="false"
+                    value={accessKey}
+                    onChange={(event) => setAccessKey(event.target.value.toUpperCase())}
+                    placeholder="Q8L2-MX7P"
+                    className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm font-bold uppercase dark:border-slate-800 dark:bg-slate-950"
+                    readOnly
+                    onFocus={(e) => e.target.removeAttribute("readonly")}
+                  />
                 </label>
               </div>
               <label className="block">
                 <span className="text-sm font-black text-slate-700 dark:text-slate-200">Password</span>
-                <input value={receivePassword} onChange={(event) => setReceivePassword(event.target.value)} type="password" placeholder="Required only when sender added one" className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-950" />
+                <input
+                  name="convilarge-transfer-passcode"
+                  autoComplete="new-password"
+                  autoCorrect="off"
+                  spellCheck="false"
+                  value={receivePassword}
+                  onChange={(event) => setReceivePassword(event.target.value)}
+                  type="password"
+                  placeholder="Required only when sender added one"
+                  className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-800 dark:bg-slate-950"
+                  readOnly
+                  onFocus={(e) => e.target.removeAttribute("readonly")}
+                />
               </label>
               <div className="flex flex-wrap gap-3">
                 <Button type="submit" disabled={loading || !accessKey}>
@@ -592,7 +642,7 @@ export default function ConviTransfer() {
                   <p className="text-xs font-black uppercase text-slate-500">Access Key</p>
                   <p className="mt-2 text-xl font-black tracking-normal">{createdTransfer.accessKey}</p>
                 </div>
-                <ExpiryCountdown expiresAt={createdTransfer.expiresAt} status={createdTransfer.status} />
+                <ExpiryCountdown expiresAt={createdTransfer.expiresAt} status={createdTransfer.status} deletedAt={createdTransfer.deletedAt} />
                 {createdTransfer.senderName && (
                   <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-950">
                     <p className="text-xs font-black uppercase text-slate-500">Shared by</p>
@@ -667,14 +717,14 @@ export default function ConviTransfer() {
                       <p><span className="font-black">Uploaded:</span> {friendlyDate(verifiedTransfer.createdAt)}</p>
                       <p><span className="font-black">Expires:</span> {friendlyDate(verifiedTransfer.expiresAt)}</p>
                     </div>
-                    <Button type="button" onClick={downloadTransfer} disabled={loading || verifiedTransfer.status === "expired" || new Date(verifiedTransfer.expiresAt).getTime() <= Date.now()} className="mt-4 w-full">
+                    <Button type="button" onClick={downloadTransfer} disabled={loading || verifiedTransfer.status === "expired" || verifiedTransfer.deletedAt || new Date(verifiedTransfer.expiresAt).getTime() <= Date.now()} className="mt-4 w-full">
                       {loading ? <RefreshCw className="animate-spin" size={18} /> : <Download size={18} />}
                       Download File{verifiedTransfer.files.length === 1 ? "" : "s"}
                     </Button>
                   </>
                 )}
                 <div className="mt-4">
-                  <ExpiryCountdown expiresAt={verifiedTransfer.expiresAt} status={verifiedTransfer.status} />
+                  <ExpiryCountdown expiresAt={verifiedTransfer.expiresAt} status={verifiedTransfer.status} deletedAt={verifiedTransfer.deletedAt} />
                 </div>
               </div>
             )}
@@ -785,7 +835,7 @@ export default function ConviTransfer() {
                     <div className="min-w-40">
                       <StatusPill status={transfer.status} />
                       <div className="mt-3">
-                        <ExpiryCountdown expiresAt={transfer.expiresAt} status={transfer.status} />
+                        <ExpiryCountdown expiresAt={transfer.expiresAt} status={transfer.status} deletedAt={transfer.deletedAt} />
                       </div>
                     </div>
                   </div>

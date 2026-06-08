@@ -119,6 +119,7 @@ export function publicTransfer(transfer, extras = {}) {
     accessKey: transfer.accessKeyDisplay || extras.accessKey,
     oneTimeDownload: transfer.oneTimeDownload,
     oneTimeView: transfer.oneTimeView,
+    deletedAt: transfer.deletedAt,
     passwordRequired: Boolean(transfer.passwordHash),
     createdAt: transfer.createdAt,
     expiresAt: transfer.expiresAt,
@@ -284,9 +285,7 @@ export async function retrieveTextTransfer({ req, transferId, accessKey, passwor
   };
   if (transfer.oneTimeView) {
     patch.deletedAt = now;
-    patch.expiredAt = now;
-    patch.status = "expired";
-    patch.events.push(event("expired", "One-Time Text Transfer Deleted", now));
+    patch.events.push(event("downloaded", "One-Time Text Transfer Deleted", now, device));
   }
 
   const updated = await updateTransferRecord(transfer.transferId, patch);
@@ -329,9 +328,7 @@ export async function sendTransferDownload({ req, res, transferId, accessKey, pa
     if (latest.oneTimeDownload) {
       await Promise.all((latest.files || []).map((file) => removeFile(file.path)));
       patch.deletedAt = completedAt;
-      patch.expiredAt = completedAt;
-      patch.status = "expired";
-      patch.events.push(event("expired", "One-Time Transfer Deleted", completedAt));
+      patch.events.push(event("downloaded", "One-Time Transfer Deleted", completedAt, latest.lastDownloadedDevice || null));
     }
     await updateTransferRecord(latest.transferId, patch);
   });

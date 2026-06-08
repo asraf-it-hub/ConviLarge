@@ -2,6 +2,7 @@ import fs from "fs";
 import { getTool, toolsByCategory, tools } from "../services/toolRegistry.js";
 import { runToolJob, readJobForDownload, publicJob, deleteJobOutput } from "../services/fileJobService.js";
 import { getJobRecord, listUserJobs } from "../services/jobStore.js";
+import { listAiTaskHistory } from "../ai/services/aiTaskStore.js";
 import { getDashboardStats } from "../services/dashboardStatsService.js";
 import { dbState } from "../config/db.js";
 import { redisState } from "../config/redis.js";
@@ -82,11 +83,38 @@ export async function deleteJob(req, res) {
 
 export async function dashboard(req, res) {
   const userId = req.user._id || req.user.id;
-  const [jobs, stats] = await Promise.all([
+  const [jobs, aiTasks, stats] = await Promise.all([
     listUserJobs(userId),
+    listAiTaskHistory(userId),
     getDashboardStats(userId)
   ]);
-  res.json({ jobs: jobs.map(publicJob), stats });
+
+  const formattedJobs = jobs.map(publicJob);
+  const formattedAiTasks = aiTasks.map((task) => {
+    const output = task.meta?.outputFile;
+    return {
+      id: task.id || task._id?.toString?.(),
+      toolType: task.toolType,
+      status: task.status,
+      error: task.error,
+      createdAt: task.createdAt,
+      expiresAt: task.expiresAt,
+      meta: task.meta,
+      outputFile: output
+        ? {
+            name: output.originalName,
+            size: output.size,
+            downloadUrl: `/ai/tasks/${task.id || task._id}/download`
+          }
+        : null
+    };
+  });
+
+  const allJobs = [...formattedJobs, ...formattedAiTasks].sort((a, b) => {
+    return new Date(b.createdAt) - new Date(a.createdAt);
+  });
+
+  res.json({ jobs: allJobs, stats });
 }
 
 export async function health(_req, res) {
