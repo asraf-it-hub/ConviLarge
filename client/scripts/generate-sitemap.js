@@ -6,23 +6,62 @@ import { toolCatalog, categoryMeta } from "../src/utils/tools.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Read CLIENT_URL from root .env
-let clientUrl = "http://localhost:5173";
-try {
-  const envPath = path.resolve(__dirname, "../../.env");
-  if (fs.existsSync(envPath)) {
-    const envContent = fs.readFileSync(envPath, "utf8");
-    const match = envContent.match(/^CLIENT_URL=(.+)$/m);
-    if (match && match[1]) {
-      clientUrl = match[1].trim();
+// Helper to escape special XML characters
+function escapeXml(unsafe) {
+  return unsafe.replace(/[<>&'"]/g, (c) => {
+    switch (c) {
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case '&': return '&amp;';
+      case '\'': return '&apos;';
+      case '"': return '&quot;';
+      default: return c;
     }
-  }
-} catch (err) {
-  console.warn("Could not load root .env file, using default client URL:", err.message);
+  });
 }
 
-// Clean clientUrl (remove trailing slash)
-clientUrl = clientUrl.replace(/\/$/, "");
+// Read base URL from env with precedence:
+// 1. process.env.VITE_SITE_URL (explicit env var)
+// 2. process.env.CLIENT_URL (explicit env var)
+// 3. .env file VITE_SITE_URL
+// 4. .env file CLIENT_URL
+// 5. Fallback to production domain
+let siteUrl = process.env.VITE_SITE_URL || process.env.CLIENT_URL;
+
+if (!siteUrl) {
+  const searchPaths = [
+    path.resolve(__dirname, "../../.env"),
+    path.resolve(__dirname, "../.env"),
+    path.resolve(__dirname, "../../client/.env")
+  ];
+
+  for (const envPath of searchPaths) {
+    try {
+      if (fs.existsSync(envPath)) {
+        const envContent = fs.readFileSync(envPath, "utf8");
+        const viteSiteUrlMatch = envContent.match(/^VITE_SITE_URL=(.+)$/m);
+        if (viteSiteUrlMatch && viteSiteUrlMatch[1]) {
+          siteUrl = viteSiteUrlMatch[1].trim();
+          break;
+        }
+        const clientUrlMatch = envContent.match(/^CLIENT_URL=(.+)$/m);
+        if (clientUrlMatch && clientUrlMatch[1]) {
+          siteUrl = clientUrlMatch[1].trim();
+          break;
+        }
+      }
+    } catch (err) {
+      // Ignore
+    }
+  }
+}
+
+if (!siteUrl) {
+  siteUrl = "https://convi-large-client.vercel.app";
+}
+
+// Clean siteUrl (remove trailing slash)
+siteUrl = siteUrl.replace(/\/$/, "");
 
 const paths = new Set();
 paths.add("/");
@@ -45,7 +84,7 @@ const urlset = [...paths]
     const priority = p === "/" ? "1.0" : p.startsWith("/ai") || p.includes("transfer") ? "0.8" : "0.7";
     const changefreq = p === "/" ? "daily" : "weekly";
     return `  <url>
-    <loc>${clientUrl}${p}</loc>
+    <loc>${escapeXml(siteUrl + p)}</loc>
     <changefreq>${changefreq}</changefreq>
     <priority>${priority}</priority>
   </url>`;
