@@ -38,7 +38,11 @@ export const env = {
   openRouterDefaultModel: process.env.OPENROUTER_DEFAULT_MODEL || "google/gemini-2.5-flash",
   openRouterMaxTokens: Number(process.env.OPENROUTER_MAX_TOKENS || 2000),
   geminiApiKey: process.env.GEMINI_API_KEY || "",
-  geminiDefaultModel: process.env.GEMINI_DEFAULT_MODEL || "gemini-2.5-flash"
+  geminiDefaultModel: process.env.GEMINI_DEFAULT_MODEL || "gemini-2.5-flash",
+  googleClientId: process.env.GOOGLE_CLIENT_ID || "",
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
+  githubClientId: process.env.GITHUB_CLIENT_ID || "",
+  githubClientSecret: process.env.GITHUB_CLIENT_SECRET || ""
 };
 
 export const paths = {

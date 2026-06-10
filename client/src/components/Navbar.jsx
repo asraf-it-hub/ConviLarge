@@ -70,7 +70,18 @@ export default function Navbar() {
                   <Button variant="soft">Admin</Button>
                 </Link>
               )}
-              <Link to="/dashboard">
+              <Link to="/dashboard" className="flex items-center gap-2">
+                {user.avatarUrl ? (
+                  <img
+                    src={user.avatarUrl}
+                    alt={user.name}
+                    className="h-8 w-8 rounded-full object-cover ring-2 ring-slate-200/50 dark:ring-slate-800/50 transition hover:scale-105"
+                  />
+                ) : (
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-sm dark:bg-white dark:text-slate-950 ring-2 ring-slate-200/50 dark:ring-slate-800/50">
+                    {user.name[0]?.toUpperCase()}
+                  </div>
+                )}
                 <Button variant="soft">Dashboard</Button>
               </Link>
               <Button onClick={handleLogout}>Logout</Button>
@@ -95,15 +106,32 @@ export default function Navbar() {
             </Button>
             {user ? (
               <>
+                <div className="col-span-2 flex items-center gap-3 py-2 border-b border-slate-200 dark:border-slate-800 mb-1">
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name}
+                      className="h-10 w-10 rounded-full object-cover ring-2 ring-slate-200/50 dark:ring-slate-800/50"
+                    />
+                  ) : (
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-base dark:bg-white dark:text-slate-950 ring-2 ring-slate-200/50 dark:ring-slate-800/50">
+                      {user.name[0]?.toUpperCase()}
+                    </div>
+                  )}
+                  <div className="text-left">
+                    <p className="font-semibold text-slate-800 dark:text-slate-200 leading-tight">{user.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{user.email}</p>
+                  </div>
+                </div>
                 {user.role === "admin" && (
-                  <Link to="/admin" onClick={() => setOpen(false)}>
+                  <Link to="/admin" onClick={() => setOpen(false)} className="col-span-2">
                     <Button variant="soft" className="w-full">Admin</Button>
                   </Link>
                 )}
-                <Link to="/dashboard" onClick={() => setOpen(false)}>
+                <Link to="/dashboard" onClick={() => setOpen(false)} className="col-span-2">
                   <Button variant="soft" className="w-full">Dashboard</Button>
                 </Link>
-                <Button onClick={handleLogout} className="w-full">Logout</Button>
+                <Button onClick={handleLogout} className="col-span-2">Logout</Button>
               </>
             ) : (
               <Link to="/auth">

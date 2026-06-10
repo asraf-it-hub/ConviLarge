@@ -29,7 +29,13 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
-  const value = useMemo(() => ({ user, login, signup, logout }), [user]);
+  function handleSocialAuth(token, user) {
+    localStorage.setItem("convilarge_token", token);
+    localStorage.setItem("convilarge_user", JSON.stringify(user));
+    setUser(user);
+  }
+
+  const value = useMemo(() => ({ user, login, signup, logout, handleSocialAuth }), [user]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
