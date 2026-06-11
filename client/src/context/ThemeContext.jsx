@@ -10,7 +10,7 @@ export function ThemeProvider({ children }) {
     localStorage.setItem("convilarge_theme", theme);
   }, [theme]);
 
-  const value = useMemo(() => ({ theme, toggleTheme: () => setTheme((next) => (next === "dark" ? "light" : "dark")) }), [theme]);
+  const value = useMemo(() => ({ theme, setTheme, toggleTheme: () => setTheme((next) => (next === "dark" ? "light" : "dark")) }), [theme]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 

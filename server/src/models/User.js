@@ -9,6 +9,10 @@ const userSchema = new mongoose.Schema(
     googleId: { type: String },
     githubId: { type: String },
     avatarUrl: { type: String },
+    username: { type: String, trim: true, unique: true, sparse: true, lowercase: true },
+    phone: { type: String, trim: true },
+    country: { type: String, trim: true },
+    bio: { type: String, trim: true },
     role: { type: String, enum: ["user", "admin"], default: "user" },
     lastLoginAt: Date
   },

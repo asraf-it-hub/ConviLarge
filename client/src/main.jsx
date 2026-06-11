@@ -15,6 +15,7 @@ const ToolCategory = lazy(() => import("./pages/ToolCategory.jsx"));
 const AuthPage = lazy(() => import("./pages/AuthPage.jsx"));
 const OAuthCallbackPage = lazy(() => import("./pages/OAuthCallbackPage.jsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.jsx"));
+const AccountPage = lazy(() => import("./pages/AccountPage.jsx"));
 const Admin = lazy(() => import("./pages/Admin.jsx"));
 const ConviTransfer = lazy(() => import("./pages/ConviTransfer.jsx"));
 
@@ -98,6 +99,16 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                   <ProtectedRoute>
                     <Suspense fallback={<SkeletonPage />}>
                       <Dashboard />
+                    </Suspense>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/account"
+                element={
+                  <ProtectedRoute>
+                    <Suspense fallback={<SkeletonPage />}>
+                      <AccountPage />
                     </Suspense>
                   </ProtectedRoute>
                 }

@@ -20,6 +20,7 @@ const links = [
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
 
@@ -70,21 +71,70 @@ export default function Navbar() {
                   <Button variant="soft">Admin</Button>
                 </Link>
               )}
-              <Link to="/dashboard" className="flex items-center gap-2">
-                {user.avatarUrl ? (
-                  <img
-                    src={user.avatarUrl}
-                    alt={user.name}
-                    className="h-8 w-8 rounded-full object-cover ring-2 ring-slate-200/50 dark:ring-slate-800/50 transition hover:scale-105"
-                  />
-                ) : (
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-sm dark:bg-white dark:text-slate-950 ring-2 ring-slate-200/50 dark:ring-slate-800/50">
-                    {user.name[0]?.toUpperCase()}
-                  </div>
+              
+              <div className="relative">
+                <button
+                  onClick={() => setDropdownOpen(!dropdownOpen)}
+                  className="flex items-center gap-2 focus:outline-none"
+                  aria-label="User menu"
+                >
+                  {user.avatarUrl ? (
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.name}
+                      className="h-9 w-9 rounded-full object-cover ring-2 ring-slate-200/50 dark:ring-slate-800/50 transition hover:scale-105"
+                    />
+                  ) : (
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white font-bold text-sm dark:bg-white dark:text-slate-950 ring-2 ring-slate-200/50 dark:ring-slate-800/50">
+                      {user.name[0]?.toUpperCase()}
+                    </div>
+                  )}
+                </button>
+                
+                {dropdownOpen && (
+                  <>
+                    <div className="fixed inset-0 z-30" onClick={() => setDropdownOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-lg bg-white p-1.5 shadow-lg ring-1 ring-slate-200 focus:outline-none dark:bg-slate-900 dark:ring-slate-800 z-40">
+                      <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-800 text-left">
+                        <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user.name}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
+                      </div>
+                      <Link
+                        to="/dashboard"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800 rounded-md transition"
+                      >
+                        Dashboard
+                      </Link>
+                      <Link
+                        to="/account"
+                        onClick={() => setDropdownOpen(false)}
+                        className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800 rounded-md transition"
+                      >
+                        Account Settings
+                      </Link>
+                      {user.role === "admin" && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setDropdownOpen(false)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-slate-800 rounded-md transition"
+                        >
+                          Admin Panel
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => {
+                          setDropdownOpen(false);
+                          handleLogout();
+                        }}
+                        className="flex w-full items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 rounded-md transition text-left"
+                      >
+                        Logout
+                      </button>
+                    </div>
+                  </>
                 )}
-                <Button variant="soft">Dashboard</Button>
-              </Link>
-              <Button onClick={handleLogout}>Logout</Button>
+              </div>
             </>
           ) : (
             <Link to="/auth">

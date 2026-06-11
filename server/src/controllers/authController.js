@@ -19,7 +19,11 @@ function userResponse(user) {
     email: user.email,
     role: user.role || "user",
     provider: user.provider || "local",
-    avatarUrl: user.avatarUrl || null
+    avatarUrl: user.avatarUrl || null,
+    username: user.username || "",
+    phone: user.phone || "",
+    country: user.country || "",
+    bio: user.bio || ""
   };
 }
 
@@ -228,4 +232,58 @@ export async function socialLogin(req, res) {
   }
 
   res.json({ user: userResponse(user), token: signToken(user) });
+}
+
+export async function updateProfile(req, res) {
+  if (!dbState.connected) throw new AppError("Accounts need MongoDB. Guest tools are still available.", 503);
+  
+  const { name, username, phone, country, bio, avatarUrl } = req.body;
+  const user = await User.findById(req.user._id);
+  if (!user) throw new AppError("User not found", 404);
+
+  if (username) {
+    const cleanUsername = username.toLowerCase().trim();
+    if (cleanUsername !== user.username) {
+      const taken = await User.findOne({ username: cleanUsername });
+      if (taken) throw new AppError("Username is already taken", 400);
+      user.username = cleanUsername;
+    }
+  } else {
+    user.username = undefined;
+  }
+
+  if (name) user.name = name.trim();
+  user.phone = phone ? phone.trim() : "";
+  user.country = country ? country.trim() : "";
+  user.bio = bio ? bio.trim() : "";
+  if (avatarUrl !== undefined) user.avatarUrl = avatarUrl;
+
+  await user.save();
+  res.json({ user: userResponse(user) });
+}
+
+export async function updatePassword(req, res) {
+  if (!dbState.connected) throw new AppError("Accounts need MongoDB. Guest tools are still available.", 503);
+  
+  const { currentPassword, newPassword } = req.body;
+  if (!newPassword || newPassword.length < 8) {
+    throw new AppError("New password must be at least 8 characters long", 400);
+  }
+
+  const user = await User.findById(req.user._id);
+  if (!user) throw new AppError("User not found", 404);
+
+  if (user.password) {
+    if (!currentPassword) {
+      throw new AppError("Current password is required", 400);
+    }
+    const match = await bcrypt.compare(currentPassword, user.password);
+    if (!match) {
+      throw new AppError("Incorrect current password", 400);
+    }
+  }
+
+  user.password = await bcrypt.hash(newPassword, 12);
+  await user.save();
+  res.json({ message: "Password updated successfully" });
 }

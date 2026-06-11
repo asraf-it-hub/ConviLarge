@@ -35,7 +35,12 @@ export function AuthProvider({ children }) {
     setUser(user);
   }
 
-  const value = useMemo(() => ({ user, login, signup, logout, handleSocialAuth }), [user]);
+  function updateAuthUser(updatedUser) {
+    localStorage.setItem("convilarge_user", JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  }
+
+  const value = useMemo(() => ({ user, login, signup, logout, handleSocialAuth, updateAuthUser }), [user]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
