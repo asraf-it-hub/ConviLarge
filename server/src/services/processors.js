@@ -7,7 +7,7 @@ import ExcelJS from "exceljs";
 import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
-import { degrees, PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { degrees, PDFDocument, PDFName, PDFRawStream, rgb, StandardFonts } from "pdf-lib";
 import { createCanvas } from "@napi-rs/canvas";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { AppError } from "../utils/errors.js";
@@ -329,11 +329,65 @@ async function removeBackground() {
   );
 }
 
-async function compressPdf(file) {
-  const source = await PDFDocument.load(await fs.readFile(file.path), { ignoreEncryption: true });
+async function compressPdf(file, level = "balanced") {
+  const qualityMap = {
+    low: { quality: 82, maxDim: 1600 },
+    light: { quality: 82, maxDim: 1600 },
+    balanced: { quality: 58, maxDim: 1100 },
+    high: { quality: 38, maxDim: 750 },
+    smallest: { quality: 32, maxDim: 650 }
+  };
+
+  const settings = qualityMap[level] || qualityMap.balanced;
+  const pdfBytes = await fs.readFile(file.path);
+  const pdfDoc = await PDFDocument.load(pdfBytes, { ignoreEncryption: true });
+
+  const indirectObjects = pdfDoc.context.enumerateIndirectObjects();
+
+  for (const [ref, obj] of indirectObjects) {
+    if (obj instanceof PDFRawStream) {
+      const dict = obj.dict;
+      const subtype = dict.get(PDFName.of("Subtype"));
+      if (subtype?.toString() === "/Image") {
+        try {
+          const imageBytes = obj.contents;
+          let pipeline = sharp(Buffer.from(imageBytes)).rotate();
+          const meta = await pipeline.metadata();
+
+          if (meta.width && meta.height) {
+            if (meta.width > settings.maxDim || meta.height > settings.maxDim) {
+              pipeline = pipeline.resize({
+                width: meta.width > settings.maxDim ? settings.maxDim : undefined,
+                height: meta.height > settings.maxDim ? settings.maxDim : undefined,
+                fit: "inside",
+                withoutEnlargement: true
+              });
+            }
+
+            const compressedJpg = await pipeline
+              .jpeg({ quality: settings.quality, mozjpeg: true })
+              .toBuffer();
+
+            const embeddedJpg = await pdfDoc.embedJpg(compressedJpg);
+            pdfDoc.context.assign(ref, embeddedJpg.ref);
+          }
+        } catch {
+          // Keep original image stream if re-encoding fails
+        }
+      }
+    }
+  }
+
   const out = outputPath(".pdf");
-  await fs.writeFile(out, await source.save({ useObjectStreams: true, addDefaultPage: false }));
-  return fileSnapshot(out, `${path.parse(file.originalname).name}-compressed.pdf`, "application/pdf", await statSize(out));
+  const compressedPdfBytes = await pdfDoc.save({ useObjectStreams: true, addDefaultPage: false });
+  await fs.writeFile(out, compressedPdfBytes);
+
+  return fileSnapshot(
+    out,
+    `${path.parse(file.originalname).name}-${level || "compressed"}.pdf`,
+    "application/pdf",
+    await statSize(out)
+  );
 }
 
 function parseRange(range, pageCount) {
@@ -680,7 +734,7 @@ export async function processTool(toolType, files, options = {}) {
     case "compress-images":
       return compressImages(files, options.level);
     case "compress-pdf":
-      return compressPdf(files[0]);
+      return compressPdf(files[0], options.level);
     case "split-pdf":
       return splitPdf(files[0], options.pageRange);
     case "rotate-pdf":
