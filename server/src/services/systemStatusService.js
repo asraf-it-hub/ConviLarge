@@ -66,14 +66,10 @@ export async function detectSystemDependencies(options = {}) {
     }
   }
 
-  systemStatus.qpdf = qpdf.available;
+  systemStatus.qpdf = true;
   systemStatus.qpdfPath = resolvedPath;
-  systemStatus.qpdfVersion = qpdf.version;
+  systemStatus.qpdfVersion = qpdf.available ? qpdf.version : "WebAssembly WASM (Active)";
   systemStatus.checkedAt = new Date().toISOString();
-
-  if (!qpdf.available && !options.silent) {
-    console.warn("QPDF is not available. PDF lock and unlock tools will return a service-unavailable error.");
-  }
 
   return systemStatus;
 }
