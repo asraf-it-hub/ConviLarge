@@ -9,6 +9,7 @@
     "worker": "node src/workers/fileWorker.js"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.3",
     "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
     "bullmq": "^5.34.2",
@@ -31,6 +32,7 @@
     "multer": "^2.0.2",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^6.2.108",
     "qrcode": "^1.5.4",
     "sharp": "^0.33.5",
     "uuid": "^11.0.3",

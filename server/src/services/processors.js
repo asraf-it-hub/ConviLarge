@@ -7,6 +7,8 @@ import ffmpeg from "fluent-ffmpeg";
 import ffmpegPath from "ffmpeg-static";
 import sharp from "sharp";
 import { degrees, PDFDocument, rgb, StandardFonts } from "pdf-lib";
+import { createCanvas } from "@napi-rs/canvas";
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { AppError } from "../utils/errors.js";
 import { fileSnapshot, outputPath, statSize } from "../utils/fs.js";
 import { getMetadata, lockPdf, removeMetadata, unlockPdf } from "./pdfSecurity/index.js";
@@ -573,25 +575,42 @@ async function numberPdfPages(file) {
 async function pdfToJpg(file) {
   const outputs = [];
   try {
-    const image = sharp(file.path, { density: 180 });
-    const meta = await image.metadata();
-    const pages = meta.pages || 1;
-    for (let page = 0; page < pages; page += 1) {
+    const data = new Uint8Array(await fs.readFile(file.path));
+    const loadingTask = pdfjsLib.getDocument({ data });
+    const pdf = await loadingTask.promise;
+
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
+      const pdfPage = await pdf.getPage(pageNum);
+      const viewport = pdfPage.getViewport({ scale: 2.0 });
+
+      const canvas = createCanvas(viewport.width, viewport.height);
+      const ctx = canvas.getContext("2d");
+
+      // Set solid white background for JPEG rendering
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, viewport.width, viewport.height);
+
+      await pdfPage.render({ canvasContext: ctx, viewport }).promise;
+
+      const jpgBuffer = await canvas.encode("jpeg", 90);
       const out = outputPath(".jpg");
-      await sharp(file.path, { density: 180, page }).jpeg({ quality: 90 }).toFile(out);
-      outputs.push({ path: out, name: `page-${page + 1}.jpg` });
+      await fs.writeFile(out, jpgBuffer);
+      outputs.push({ path: out, name: `page-${pageNum}.jpg` });
     }
   } catch (error) {
-    throw new AppError(
-      "PDF to JPG is temporarily unavailable. Please try again later.",
-      503,
-      {
-        cause: error.message,
-        sourceUrl: "https://sharp.pixelplumbing.com/install/"
-      }
+    throw new AppError(`PDF to JPG conversion failed: ${error.message}`);
+  }
+
+  if (outputs.length === 1) {
+    return fileSnapshot(
+      outputs[0].path,
+      `${path.parse(file.originalname).name}.jpg`,
+      "image/jpeg",
+      await statSize(outputs[0].path)
     );
   }
-  return zipFiles(outputs, "pdf-pages-jpg.zip");
+
+  return zipFiles(outputs, `${path.parse(file.originalname).name}-jpg-pages.zip`);
 }
 
 async function mp4ToMp3(file) {
