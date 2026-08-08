@@ -24,21 +24,27 @@ ${text}`
 
   if (toolType === "ai-resume-analyzer") {
     return {
-      system: `You are a careful resume reviewer. Be helpful, specific, and avoid hiring guarantees. ${jsonRule}`,
-      prompt: `Analyze this resume for clarity, strength, and fit.
+      system: `You are an expert resume reviewer and ATS evaluator. Provide constructive feedback, specific rewrites, and an accurate resume rating out of 100. ${jsonRule}`,
+      prompt: `Analyze this resume for clarity, impact, technical strength, ATS optimization, and role alignment.
 
 Target role or note from user: ${options.targetRole || "Not provided"}
 
+CRITICAL SCORING RULE:
+"score" MUST be an integer strictly between 0 and 100 (percentage out of 100). Do NOT return a score from 1 to 10.
+- 85-100: Strong resume with clear impact, strong skills, and good project/work proof.
+- 70-84: Solid candidate needing minor formatting or metric additions.
+- Below 70: Needs structural work or missing key sections.
+
 Return this JSON shape:
 {
-  "score": 0,
-  "headline": "short assessment",
+  "score": 85,
+  "headline": "short assessment summary",
   "strengths": ["strength"],
   "gaps": ["gap"],
-  "improvements": ["specific rewrite or improvement"],
-  "keywords": ["keyword"],
-  "atsNotes": ["ATS note"],
-  "suggestedSummary": "optional improved professional summary"
+  "improvements": ["specific rewrite or metric improvement"],
+  "keywords": ["key skill/keyword found"],
+  "atsNotes": ["ATS compliance note"],
+  "suggestedSummary": "improved professional summary"
 }
 
 Resume text:

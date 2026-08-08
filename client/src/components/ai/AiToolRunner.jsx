@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, CheckCircle2, Clock, Download, Eye, Loader2, LogIn, RefreshCw, Sparkles, Trash2 } from "lucide-react";
+import { AlertTriangle, Award, BookOpen, Bot, Briefcase, CheckCircle2, Clock, Code2, Download, Eye, FileCheck2, FileText, GraduationCap, HelpCircle, Lightbulb, Loader2, LogIn, RefreshCw, ShieldAlert, Sparkles, Star, Tag, Trash2, Trophy, Zap } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -29,17 +29,82 @@ function actionLinkClass() {
   return "focus-ring inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-ink px-4 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-950 dark:hover:bg-slate-200";
 }
 
-function ValueList({ title, items }) {
+function HighlightText({ text }) {
+  if (!text || typeof text !== "string") return text;
+
+  const pattern = /(CGPA[\s:]*\d+\.?\d*|\b\d+\.?\d*\s*\/\s*10\b|\b\d+%\b|\b\d+k\+\b|\b\d+\+\b|MERN stack|MERN|Flutter|React|Node\.js|Express|MongoDB|TypeScript|JavaScript|Python|Docker|AWS|REST APIs?|DSA|OOP|DBMS|LeetCode|GitHub|Certification|Certified|Awarded|First place|Rank \d+|Top \d+%?)/gi;
+
+  const parts = text.split(pattern);
+
+  return (
+    <span>
+      {parts.map((part, index) => {
+        if (!part) return null;
+        const lower = part.toLowerCase();
+
+        // Achievements & CGPA
+        if (lower.includes("cgpa") || lower.match(/\d+\.?\d*\s*\/\s*10/) || lower.includes("awarded") || lower.includes("rank") || lower.includes("first place")) {
+          return (
+            <span key={index} className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 text-xs font-extrabold text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300 mx-0.5 shadow-2xs">
+              <Trophy size={12} className="shrink-0 text-emerald-500" />
+              {part}
+            </span>
+          );
+        }
+
+        // Projects & Tech Stacks
+        if (["mern stack", "mern", "flutter", "react", "node.js", "express", "mongodb", "typescript", "javascript", "python", "docker", "aws", "rest api", "rest apis", "dsa", "oop", "dbms", "leetcode", "github"].includes(lower)) {
+          return (
+            <span key={index} className="inline-flex items-center gap-1 rounded-md border border-brand-500/30 bg-brand-500/10 px-1.5 py-0.5 text-xs font-extrabold text-brand-600 dark:bg-brand-500/20 dark:text-brand-300 mx-0.5 shadow-2xs">
+              <Code2 size={12} className="shrink-0 text-brand-500" />
+              {part}
+            </span>
+          );
+        }
+
+        // Metrics & Results
+        if (lower.match(/\d+%/) || lower.match(/\d+k\+/) || lower.match(/\d+\+/)) {
+          return (
+            <span key={index} className="inline-flex items-center gap-1 rounded-md border border-cyan-500/30 bg-cyan-500/10 px-1.5 py-0.5 text-xs font-extrabold text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-300 mx-0.5 shadow-2xs">
+              <Zap size={12} className="shrink-0 text-cyan-500" />
+              {part}
+            </span>
+          );
+        }
+
+        // Certifications
+        if (lower.includes("certification") || lower.includes("certified")) {
+          return (
+            <span key={index} className="inline-flex items-center gap-1 rounded-md border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-xs font-extrabold text-amber-600 dark:bg-amber-500/20 dark:text-amber-300 mx-0.5 shadow-2xs">
+              <Award size={12} className="shrink-0 text-amber-500" />
+              {part}
+            </span>
+          );
+        }
+
+        return part;
+      })}
+    </span>
+  );
+}
+
+function ValueList({ title, items, icon: Icon }) {
   if (!items?.length) return null;
   return (
-    <div>
-      <h3 className="text-sm font-black uppercase text-slate-500">{title}</h3>
-      <ul className="mt-2 space-y-2">
-        {items.map((item, index) => (
-          <li key={`${title}-${index}`} className="rounded-lg bg-slate-50 p-3 text-sm leading-6 dark:bg-slate-950/50">
-            {typeof item === "string" ? item : `${item.toolName || item.toolId || "Item"}: ${item.reason || item.answer || ""}`}
-          </li>
-        ))}
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        {Icon && <Icon size={16} className="text-brand-500 shrink-0" />}
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">{title}</h3>
+      </div>
+      <ul className="space-y-2">
+        {items.map((item, index) => {
+          const rawText = typeof item === "string" ? item : `${item.toolName || item.toolId || "Item"}: ${item.reason || item.answer || ""}`;
+          return (
+            <li key={`${title}-${index}`} className="rounded-xl border border-slate-200/80 bg-slate-50/80 p-3.5 text-sm leading-6 dark:border-slate-800 dark:bg-slate-950/50 shadow-2xs">
+              <HighlightText text={rawText} />
+            </li>
+          );
+        })}
       </ul>
     </div>
   );
@@ -223,17 +288,69 @@ function AiResult({ task, beforeUrl }) {
               <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-950/50"><p className="text-sm font-black">Translated preview</p><p className="mt-2 text-sm leading-6">{output.previewTranslated}</p></div>
             </div>
           )}
-          {Number.isFinite(output.score) && <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-950/50"><p className="text-sm font-bold text-slate-500">Resume score</p><p className="mt-1 text-3xl font-black">{output.score}/100</p></div>}
+          {Number.isFinite(output.score) && (() => {
+            const normalizedScore = output.score <= 10 ? Math.round(output.score * 10) : Math.min(100, Math.max(0, Math.round(output.score)));
+            const isHigh = normalizedScore >= 80;
+            const isMedium = normalizedScore >= 60 && normalizedScore < 80;
+
+            return (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950/60 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Overall Resume Rating</p>
+                  <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">Evaluated on technical depth, impact, academic record, and ATS formatting</p>
+                </div>
+                <div className={`shrink-0 rounded-xl px-4 py-2 text-center font-mono text-2xl font-black shadow-sm ${
+                  isHigh
+                    ? "bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 ring-1 ring-emerald-500/30"
+                    : isMedium
+                      ? "bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 ring-1 ring-amber-500/30"
+                      : "bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 ring-1 ring-rose-500/30"
+                }`}>
+                  {normalizedScore}<span className="text-sm font-bold opacity-75">/100</span>
+                </div>
+              </div>
+            );
+          })()}
           {output.recommendedToolName && <div className="rounded-lg bg-brand-50 p-4 dark:bg-brand-900/30"><p className="text-sm font-bold text-brand-700 dark:text-brand-100">Recommended tool</p><p className="mt-1 text-xl font-black">{output.recommendedToolName}</p><p className="mt-2 text-sm leading-6">{output.reason}</p></div>}
-          <ValueList title="Key points" items={output.keyPoints} />
-          <ValueList title="Action items" items={output.actionItems} />
-          <ValueList title="Warnings" items={output.risksOrWarnings} />
-          <ValueList title="Strengths" items={output.strengths} />
-          <ValueList title="Gaps" items={output.gaps} />
-          <ValueList title="Improvements" items={output.improvements} />
-          <ValueList title="ATS notes" items={output.atsNotes} />
-          <ValueList title="Alternatives" items={output.alternatives} />
-          <ValueList title="Notes" items={output.notes || output.studyTips} />
+          
+          {output.keywords?.length > 0 && (
+            <div className="rounded-xl border border-brand-200/80 bg-brand-50/40 p-4 dark:border-brand-900/40 dark:bg-brand-950/30">
+              <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-brand-700 dark:text-brand-300">
+                <Tag size={15} />
+                <span>Key Tech Skills & Keywords Found</span>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {output.keywords.map((keyword, i) => (
+                  <span key={i} className="inline-flex items-center gap-1.5 rounded-full border border-brand-300/60 bg-white px-3 py-1 text-xs font-bold text-brand-800 shadow-2xs dark:border-brand-700/60 dark:bg-slate-900 dark:text-brand-200">
+                    <Sparkles size={12} className="text-brand-500" />
+                    {keyword}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {output.suggestedSummary && (
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4 dark:border-indigo-900/50 dark:bg-indigo-950/40">
+              <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
+                <Sparkles size={15} />
+                <span>Suggested Summary Rewrite</span>
+              </div>
+              <p className="mt-2 text-sm leading-relaxed text-slate-800 dark:text-slate-200 font-medium italic">
+                "{output.suggestedSummary}"
+              </p>
+            </div>
+          )}
+
+          <ValueList title="Key points" items={output.keyPoints} icon={FileText} />
+          <ValueList title="Action items" items={output.actionItems} icon={Zap} />
+          <ValueList title="Warnings" items={output.risksOrWarnings} icon={AlertTriangle} />
+          <ValueList title="Strengths" items={output.strengths} icon={CheckCircle2} />
+          <ValueList title="Gaps & Areas to Address" items={output.gaps} icon={ShieldAlert} />
+          <ValueList title="Recommended Improvements" items={output.improvements} icon={Lightbulb} />
+          <ValueList title="ATS Compliance Notes" items={output.atsNotes} icon={FileCheck2} />
+          <ValueList title="Alternatives" items={output.alternatives} icon={HelpCircle} />
+          <ValueList title="Notes & Tips" items={output.notes || output.studyTips} icon={BookOpen} />
         </div>
       </section>
 
