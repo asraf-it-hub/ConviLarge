@@ -1,16 +1,29 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import { Heart } from "lucide-react";
+import Button from "../Button.jsx";
 
-const INITIAL_FEATURES = [
-  { id: "w1", title: "EPUB to PDF converter", desc: "Support converting EPUB books into standard PDF formatting.", votes: 412, upvoted: false },
-  { id: "w2", title: "AI Audio Transcription", desc: "Transcribe MP3/WAV uploads to txt files with speech analysis.", votes: 388, upvoted: false },
-  { id: "w3", title: "Batch Watermark PDF", desc: "Watermark thousands of documents simultaneously in queues.", votes: 124, upvoted: false }
-];
+const STORAGE_KEY = "convilarge_user_wishlist";
 
 export default function WishlistTab() {
-  const [features, setFeatures] = useState(INITIAL_FEATURES);
+  const [features, setFeatures] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [newRequest, setNewRequest] = useState({ title: "", desc: "" });
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(features));
+    } catch (e) {
+      console.error("Failed to save wishlist to localStorage", e);
+    }
+  }, [features]);
 
   function handleVote(id) {
     setFeatures((prev) =>
@@ -96,26 +109,36 @@ export default function WishlistTab() {
       )}
 
       <div className="space-y-4 max-w-3xl">
-        {features.map((f) => (
-          <div key={f.id} className="p-5 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm flex gap-4 items-start justify-between">
-            <div className="space-y-1">
-              <h3 className="font-bold text-slate-900 dark:text-white text-base">{f.title}</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{f.desc}</p>
+        {features.length > 0 ? (
+          features.map((f) => (
+            <div key={f.id} className="p-5 border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900 shadow-sm flex gap-4 items-start justify-between">
+              <div className="space-y-1">
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">{f.title}</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 leading-relaxed">{f.desc}</p>
+              </div>
+              
+              <button
+                onClick={() => handleVote(f.id)}
+                className={`flex flex-col items-center justify-center border p-2 rounded-lg w-14 shrink-0 transition select-none ${
+                  f.upvoted
+                    ? "bg-slate-950 border-slate-950 text-white dark:bg-white dark:border-white dark:text-slate-950"
+                    : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
+                }`}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+                <span className="text-xs font-bold mt-1">{f.votes}</span>
+              </button>
             </div>
-            
-            <button
-              onClick={() => handleVote(f.id)}
-              className={`flex flex-col items-center justify-center border p-2 rounded-lg w-14 shrink-0 transition select-none ${
-                f.upvoted
-                  ? "bg-slate-950 border-slate-950 text-white dark:bg-white dark:border-white dark:text-slate-950"
-                  : "bg-white border-slate-200 text-slate-700 hover:bg-slate-50 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-800"
-              }`}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
-              <span className="text-xs font-bold mt-1">{f.votes}</span>
-            </button>
+          ))
+        ) : (
+          <div className="py-12 text-center border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900">
+            <Heart className="mx-auto h-12 w-12 text-slate-350 dark:text-slate-600" />
+            <h3 className="mt-4 font-semibold text-slate-900 dark:text-white">No feature requests yet</h3>
+            <p className="mt-2 text-xs text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+              Click "Request Feature" above to suggest new tool integrations or features to our developers.
+            </p>
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

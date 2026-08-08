@@ -1,18 +1,29 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
 import Button from "../Button.jsx";
 
-const INITIAL_PROJECTS = [
-  { id: "1", name: "Q2 Financial Reports", fileCount: 4, lastUpdated: "2 hours ago" },
-  { id: "2", name: "AI Resume Scanner Pack", fileCount: 18, lastUpdated: "3 days ago" },
-  { id: "3", name: "Marketing Graphics PDF Build", fileCount: 7, lastUpdated: "1 week ago" }
-];
+const STORAGE_KEY = "convilarge_user_projects";
 
 export default function ProjectsTab() {
-  const [projects, setProjects] = useState(INITIAL_PROJECTS);
+  const [projects, setProjects] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
   const [name, setName] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(projects));
+    } catch (e) {
+      console.error("Failed to save projects to localStorage", e);
+    }
+  }, [projects]);
 
   function handleCreate(e) {
     e.preventDefault();

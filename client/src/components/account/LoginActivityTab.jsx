@@ -1,14 +1,38 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import toast from "react-hot-toast";
 
-const INITIAL_SESSIONS = [
-  { id: "s1", current: true, os: "Windows 11", browser: "Chrome 125.0", ip: "103.117.228.15", location: "Hyderabad, India", lastActive: "Just now" },
-  { id: "s2", current: false, os: "iOS 17.4", browser: "Mobile Safari", ip: "49.206.121.22", location: "Hyderabad, India", lastActive: "4 hours ago" },
-  { id: "s3", current: false, os: "macOS Sonoma", browser: "Firefox 126.0", ip: "182.74.83.2", location: "Bengaluru, India", lastActive: "2 days ago" }
-];
+function detectUserDevice() {
+  const ua = navigator.userAgent;
+  let os = "Desktop";
+  if (ua.includes("Win")) os = "Windows";
+  else if (ua.includes("Mac")) os = "macOS";
+  else if (ua.includes("Linux")) os = "Linux";
+  else if (ua.includes("Android")) os = "Android";
+  else if (ua.includes("iPhone") || ua.includes("iPad")) os = "iOS";
+
+  let browser = "Web Browser";
+  if (ua.includes("Chrome") && !ua.includes("Edg")) browser = "Chrome";
+  else if (ua.includes("Edg")) browser = "Edge";
+  else if (ua.includes("Safari") && !ua.includes("Chrome")) browser = "Safari";
+  else if (ua.includes("Firefox")) browser = "Firefox";
+
+  return { os, browser };
+}
 
 export default function LoginActivityTab() {
-  const [sessions, setSessions] = useState(INITIAL_SESSIONS);
+  const deviceInfo = useMemo(() => detectUserDevice(), []);
+
+  const [sessions, setSessions] = useState([
+    {
+      id: "current-session",
+      current: true,
+      os: deviceInfo.os,
+      browser: deviceInfo.browser,
+      ip: "Active Connection",
+      location: "Current Device",
+      lastActive: "Just now"
+    }
+  ]);
 
   function handleRevoke(sessionId, name) {
     if (confirm(`Are you sure you want to log out of the session on ${name}?`)) {
