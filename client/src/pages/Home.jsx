@@ -58,7 +58,7 @@ export default function Home() {
           </div>
         </div>
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-lg bg-slate-950 shadow-soft ring-1 ring-slate-800">
-          <img src="/brand/convilarge-hero.webp" alt="ConviLarge file conversion symbol" className="aspect-[16/9] w-full object-cover" />
+          <img src="/brand/ConviLargeLogo.png" alt="ConviLarge file conversion logo" className="aspect-[16/9] w-full object-cover" />
           <div className="grid gap-2 bg-white/95 p-4 dark:bg-slate-900/95">
             {popular.slice(0, 4).map((id, index) => {
               const tool = toolCatalog.find((item) => item.id === id);
