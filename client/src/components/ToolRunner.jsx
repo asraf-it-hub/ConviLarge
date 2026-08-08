@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { BadgeCheck, CheckCircle2, Download, FileDown, Image, Loader2, RefreshCw, ShieldCheck, Trash2, Type, WandSparkles } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Crop, Download, FileDown, Image, Loader2, RefreshCw, ShieldCheck, Trash2, Type, WandSparkles } from "lucide-react";
 import { useMemo, useState } from "react";
 import toast from "react-hot-toast";
 import { api, downloadUrl } from "../services/api.js";
@@ -7,6 +7,7 @@ import { formatBytes } from "../utils/tools.js";
 import Button from "./Button.jsx";
 import FileDropzone from "./FileDropzone.jsx";
 import PdfPageSelector from "./PdfPageSelector.jsx";
+import InteractiveImageCropper from "./InteractiveImageCropper.jsx";
 
 const watermarkPresets = {
   professional: {
@@ -81,6 +82,7 @@ export default function ToolRunner({ tool }) {
   const [height, setHeight] = useState("");
   const [keepAspect, setKeepAspect] = useState(true);
   const [crop, setCrop] = useState({ x: "0", y: "0", width: "", height: "" });
+  const [cropperOpen, setCropperOpen] = useState(false);
   const [angle, setAngle] = useState("90");
   const [watermarkText, setWatermarkText] = useState("");
   const [watermarkPreset, setWatermarkPreset] = useState("professional");
@@ -278,18 +280,50 @@ export default function ToolRunner({ tool }) {
         )}
 
         {needsCrop && (
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            {[
-              ["x", "X"],
-              ["y", "Y"],
-              ["width", "Width"],
-              ["height", "Height"]
-            ].map(([key, label]) => (
-              <label key={key} className="block text-sm font-semibold">
-                {label}
-                <input className="focus-ring mt-2 h-11 w-full rounded-lg border border-slate-200 bg-white px-3 dark:border-slate-700 dark:bg-slate-950" type="number" min="0" value={crop[key]} onChange={(event) => setCrop({ ...crop, [key]: event.target.value })} />
-              </label>
-            ))}
+          <div className="mt-5 space-y-4">
+            <button
+              type="button"
+              disabled={!files.length}
+              onClick={() => setCropperOpen(true)}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 via-indigo-600 to-brand-700 px-4 py-3 text-sm font-bold text-white shadow-md transition-all hover:brightness-110 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Crop size={18} />
+              {files.length ? "Open Visual Image Cropper" : "Upload image to crop visually"}
+            </button>
+
+            {crop.width && crop.height ? (
+              <div className="rounded-lg border border-brand-200 bg-brand-50/50 p-3 text-xs dark:border-brand-900/50 dark:bg-brand-950/30 flex items-center justify-between">
+                <span className="text-slate-600 dark:text-slate-400 font-medium">Selected crop area:</span>
+                <span className="font-mono font-bold text-brand-700 dark:text-brand-300">
+                  X:{crop.x}, Y:{crop.y} ({crop.width} × {crop.height} px)
+                </span>
+              </div>
+            ) : null}
+
+            <details className="group text-xs">
+              <summary className="cursor-pointer font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white transition py-1">
+                Manual coordinate inputs
+              </summary>
+              <div className="mt-2 grid grid-cols-2 gap-3 pt-1">
+                {[
+                  ["x", "X"],
+                  ["y", "Y"],
+                  ["width", "Width"],
+                  ["height", "Height"]
+                ].map(([key, label]) => (
+                  <label key={key} className="block text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {label}
+                    <input
+                      className="focus-ring mt-1.5 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs dark:border-slate-700 dark:bg-slate-950"
+                      type="number"
+                      min="0"
+                      value={crop[key]}
+                      onChange={(event) => setCrop({ ...crop, [key]: event.target.value })}
+                    />
+                  </label>
+                ))}
+              </div>
+            </details>
           </div>
         )}
 
@@ -577,6 +611,27 @@ export default function ToolRunner({ tool }) {
           )}
         </AnimatePresence>
       </aside>
+
+      {cropperOpen && files[0] && (
+        <InteractiveImageCropper
+          file={files[0]}
+          initialCrop={crop}
+          onClose={() => setCropperOpen(false)}
+          onApply={(cropData) => {
+            setCrop({
+              x: String(cropData.x),
+              y: String(cropData.y),
+              width: String(cropData.width),
+              height: String(cropData.height)
+            });
+            setCropperOpen(false);
+            toast.success(`✨ Crop box set: ${cropData.width} × ${cropData.height} px`, {
+              position: "top-right",
+              duration: 3500
+            });
+          }}
+        />
+      )}
     </form>
   );
 }
