@@ -2,7 +2,12 @@ export function notFound(_req, res) {
   res.status(404).json({ message: "Route not found" });
 }
 
-export function errorHandler(error, _req, res, _next) {
+export function errorHandler(error, req, res, _next) {
+  if (req.headers.origin) {
+    res.header("Access-Control-Allow-Origin", req.headers.origin);
+    res.header("Access-Control-Allow-Credentials", "true");
+  }
+
   if (error.name === "ZodError") {
     return res.status(422).json({
       message: "Please check the form fields",

@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import util from "util";
 import { createRequire } from "module";
 import archiver from "archiver";
 import ExcelJS from "exceljs";
@@ -14,6 +15,7 @@ import { fileSnapshot, outputPath, statSize } from "../utils/fs.js";
 import { getMetadata, lockPdf, removeMetadata, unlockPdf } from "./pdfSecurity/index.js";
 
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
+const ffprobePromise = util.promisify(ffmpeg.ffprobe);
 const require = createRequire(import.meta.url);
 const DocxMerger = require("docx-merger");
 const heicConvert = require("heic-convert");
@@ -139,25 +141,35 @@ async function mergeAudio(files) {
 
 async function mergeVideo(files) {
   const out = outputPath(".mp4");
-  const command = ffmpeg();
-  files.forEach((file) => command.input(file.path));
-  const filters = [];
-  const concatInputs = [];
+  const listFile = outputPath(".txt");
 
-  files.forEach((_, index) => {
-    filters.push(`[${index}:v:0]scale=1280:-2,setsar=1,fps=30[v${index}]`);
-    filters.push(`[${index}:a:0]aresample=48000[a${index}]`);
-    concatInputs.push(`[v${index}][a${index}]`);
-  });
+  const fileListContent = files
+    .map((f) => `file '${f.path.replace(/\\/g, "/")}'`)
+    .join("\n");
 
-  filters.push(`${concatInputs.join("")}concat=n=${files.length}:v=1:a=1[outv][outa]`);
+  await fs.writeFile(listFile, fileListContent, "utf8");
 
-  await runFfmpeg(
-    command
-      .complexFilter(filters)
-      .outputOptions(["-map [outv]", "-map [outa]", "-c:v libx264", "-preset veryfast", "-crf 23", "-c:a aac", "-b:a 160k", "-movflags +faststart"])
-      .output(out)
-  );
+  try {
+    const command = ffmpeg();
+    await runFfmpeg(
+      command
+        .input(listFile)
+        .inputOptions(["-f concat", "-safe 0"])
+        .outputOptions([
+          "-c:v libx264",
+          "-preset ultrafast",
+          "-crf 26",
+          "-c:a aac",
+          "-b:a 128k",
+          "-movflags +faststart"
+        ])
+        .output(out)
+    );
+  } catch (error) {
+    throw new AppError(`Video merge failed: ${error.message || "Failed to combine video files"}`);
+  } finally {
+    await fs.unlink(listFile).catch(() => {});
+  }
 
   return fileSnapshot(out, "merged-video.mp4", "video/mp4", await statSize(out));
 }
