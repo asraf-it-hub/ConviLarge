@@ -322,11 +322,88 @@ async function heicToJpg(file) {
   return fileSnapshot(out, `${path.parse(file.originalname).name}.jpg`, "image/jpeg", await statSize(out));
 }
 
-async function removeBackground() {
-  throw new AppError(
-    "Remove Background is temporarily unavailable due to high traffic. Please try again later.",
-    503
-  );
+async function removeBackground(file) {
+  // Tier 1: Check for REMOVE_BG_API_KEY if configured in .env
+  if (process.env.REMOVE_BG_API_KEY) {
+    try {
+      const fileBuffer = await fs.readFile(file.path);
+      const blob = new Blob([fileBuffer]);
+      const formData = new FormData();
+      formData.append("image_file", blob, file.originalname);
+      formData.append("size", "auto");
+
+      const response = await fetch("https://api.remove.bg/v1.0/removebg", {
+        method: "POST",
+        headers: { "X-Api-Key": process.env.REMOVE_BG_API_KEY },
+        body: formData
+      });
+
+      if (response.ok) {
+        const arrayBuf = await response.arrayBuffer();
+        const out = outputPath(".png");
+        await fs.writeFile(out, Buffer.from(arrayBuf));
+        return fileSnapshot(out, `${path.parse(file.originalname).name}-nobg.png`, "image/png", await statSize(out));
+      }
+    } catch {
+      // Fallback to local AI / Sharp matte engine
+    }
+  }
+
+  // Tier 2: Try local @imgly/background-removal-node AI inference
+  try {
+    const { removeBackground: imglyRemoveBg } = await import("@imgly/background-removal-node");
+    const blob = await imglyRemoveBg(file.path);
+    const arrayBuffer = await blob.arrayBuffer();
+    const out = outputPath(".png");
+    await fs.writeFile(out, Buffer.from(arrayBuffer));
+    return fileSnapshot(out, `${path.parse(file.originalname).name}-nobg.png`, "image/png", await statSize(out));
+  } catch {
+    // Tier 3: Smart Color & Alpha Matte Thresholding using Sharp
+    const image = sharp(file.path);
+    const { data, info } = await image
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    // Sample corner pixels to determine dominant background color
+    const corners = [
+      0,
+      (info.width - 1) * 4,
+      (info.height - 1) * info.width * 4,
+      ((info.height - 1) * info.width + (info.width - 1)) * 4
+    ];
+
+    let bgR = 0, bgG = 0, bgB = 0;
+    corners.forEach((idx) => {
+      bgR += data[idx];
+      bgG += data[idx + 1];
+      bgB += data[idx + 2];
+    });
+    bgR = Math.round(bgR / 4);
+    bgG = Math.round(bgG / 4);
+    bgB = Math.round(bgB / 4);
+
+    const tolerance = 48;
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+
+      const diff = Math.sqrt((r - bgR) ** 2 + (g - bgG) ** 2 + (b - bgB) ** 2);
+      if (diff < tolerance) {
+        data[i + 3] = Math.max(0, Math.round(((diff - (tolerance - 18)) / 18) * 255));
+      }
+    }
+
+    const out = outputPath(".png");
+    await sharp(data, {
+      raw: { width: info.width, height: info.height, channels: 4 }
+    })
+      .png()
+      .toFile(out);
+
+    return fileSnapshot(out, `${path.parse(file.originalname).name}-nobg.png`, "image/png", await statSize(out));
+  }
 }
 
 async function compressPdf(file, level = "balanced") {

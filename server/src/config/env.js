@@ -42,7 +42,8 @@ export const env = {
   googleClientId: process.env.GOOGLE_CLIENT_ID || "",
   googleClientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
   githubClientId: process.env.GITHUB_CLIENT_ID || "",
-  githubClientSecret: process.env.GITHUB_CLIENT_SECRET || ""
+  githubClientSecret: process.env.GITHUB_CLIENT_SECRET || "",
+  removeBgApiKey: process.env.REMOVE_BG_API_KEY || ""
 };
 
 export const paths = {

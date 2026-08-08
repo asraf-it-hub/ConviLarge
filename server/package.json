@@ -9,6 +9,7 @@
     "worker": "node src/workers/fileWorker.js"
   },
   "dependencies": {
+    "@imgly/background-removal-node": "^1.4.5",
     "@napi-rs/canvas": "^1.0.3",
     "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
@@ -34,7 +35,7 @@
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^6.2.108",
     "qrcode": "^1.5.4",
-    "sharp": "^0.33.5",
+    "sharp": "^0.35.3",
     "uuid": "^11.0.3",
     "zod": "^3.24.1"
   },
