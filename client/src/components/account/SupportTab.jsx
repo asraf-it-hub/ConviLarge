@@ -1,19 +1,28 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { api } from "../../services/api.js";
 import Button from "../Button.jsx";
 
 export default function SupportTab() {
   const [form, setForm] = useState({ subject: "", category: "billing", message: "" });
   const [sending, setSending] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    if (!form.subject.trim() || !form.message.trim()) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
     setSending(true);
-    setTimeout(() => {
-      setSending(false);
+    try {
+      await api.post("/support", form);
       setForm({ subject: "", category: "billing", message: "" });
-      toast.success("Support ticket submitted! We will respond within 24 hours.");
-    }, 1000);
+      toast.success("Support ticket submitted! Our team will respond shortly.");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to submit support ticket");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (

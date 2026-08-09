@@ -2,6 +2,9 @@ import { dbState } from "../config/db.js";
 import { redisState } from "../config/redis.js";
 import { User } from "../models/User.js";
 import { ConversionJob } from "../models/ConversionJob.js";
+import { SupportTicket } from "../models/SupportTicket.js";
+import { Feedback } from "../models/Feedback.js";
+import { BugReport } from "../models/BugReport.js";
 import { AppError } from "../utils/errors.js";
 
 function requireDb() {
@@ -25,6 +28,8 @@ export async function adminOverview(_req, res) {
     loggedInJobs,
     completedJobs,
     failedJobs,
+    openTickets,
+    avgRatingData,
     recentUsers,
     recentJobs,
     toolUsage,
@@ -36,6 +41,8 @@ export async function adminOverview(_req, res) {
     ConversionJob.countDocuments({ user: { $exists: true, $ne: null } }),
     ConversionJob.countDocuments({ status: "completed" }),
     ConversionJob.countDocuments({ status: "failed" }),
+    SupportTicket.countDocuments({ status: "open" }),
+    Feedback.aggregate([{ $group: { _id: null, avg: { $avg: "$rating" }, total: { $sum: 1 } } }]),
     User.find().select("name email role createdAt lastLoginAt").sort({ createdAt: -1 }).limit(8),
     ConversionJob.find()
       .select("toolType status user outputFile error createdAt expiresAt")
@@ -55,7 +62,17 @@ export async function adminOverview(_req, res) {
   ]);
 
   res.json({
-    totals: { totalUsers, totalJobs, guestJobs, loggedInJobs, completedJobs, failedJobs },
+    totals: {
+      totalUsers,
+      totalJobs,
+      guestJobs,
+      loggedInJobs,
+      completedJobs,
+      failedJobs,
+      openTickets,
+      avgRating: avgRatingData[0]?.avg ? Number(avgRatingData[0].avg.toFixed(1)) : 5.0,
+      totalFeedbacks: avgRatingData[0]?.total || 0
+    },
     recentUsers,
     recentJobs,
     toolUsage: toolUsage.map((item) => ({ toolType: item._id, count: item.count, failures: item.failures })),
@@ -107,3 +124,57 @@ export async function deleteAdminJob(req, res) {
   if (!job) throw new AppError("Job not found", 404);
   res.json({ message: "Job deleted" });
 }
+
+export async function adminSupportTickets(req, res) {
+  requireDb();
+  const tickets = await SupportTicket.find()
+    .populate("user", "name email")
+    .sort({ createdAt: -1 })
+    .limit(100);
+  res.json({ tickets });
+}
+
+export async function updateAdminSupportTicket(req, res) {
+  requireDb();
+  const { status } = req.body;
+  const ticket = await SupportTicket.findByIdAndUpdate(
+    req.params.id,
+    { status },
+    { new: true }
+  ).populate("user", "name email");
+
+  if (!ticket) throw new AppError("Ticket not found", 404);
+  res.json({ ticket });
+}
+
+export async function adminFeedbacks(req, res) {
+  requireDb();
+  const feedbacks = await Feedback.find()
+    .populate("user", "name email")
+    .sort({ createdAt: -1 })
+    .limit(100);
+  res.json({ feedbacks });
+}
+
+export async function adminBugReports(req, res) {
+  requireDb();
+  const reports = await BugReport.find()
+    .populate("user", "name email")
+    .sort({ createdAt: -1 })
+    .limit(100);
+  res.json({ reports });
+}
+
+export async function updateAdminBugReport(req, res) {
+  requireDb();
+  const { status } = req.body;
+  const report = await BugReport.findByIdAndUpdate(
+    req.params.id,
+    { status },
+    { new: true }
+  ).populate("user", "name email");
+
+  if (!report) throw new AppError("Bug report not found", 404);
+  res.json({ report });
+}
+

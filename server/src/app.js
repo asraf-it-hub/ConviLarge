@@ -9,6 +9,7 @@ import { adminRoutes } from "./routes/adminRoutes.js";
 import { authRoutes } from "./routes/authRoutes.js";
 import { toolRoutes } from "./routes/toolRoutes.js";
 import { transferRoutes } from "./routes/transferRoutes.js";
+import { supportRoutes } from "./routes/supportRoutes.js";
 import { aiRoutes } from "./ai/routes/aiRoutes.js";
 import { errorHandler, notFound } from "./middleware/error.js";
 
@@ -37,6 +38,7 @@ export function createApp() {
   app.use("/api/admin", adminRoutes);
   app.use("/api/ai", aiRoutes);
   app.use("/api/transfers", transferRoutes);
+  app.use("/api", supportRoutes);
   app.use("/api", toolRoutes);
 
   app.use(notFound);

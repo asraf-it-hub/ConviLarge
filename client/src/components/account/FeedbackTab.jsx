@@ -1,5 +1,6 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { api } from "../../services/api.js";
 import Button from "../Button.jsx";
 
 export default function FeedbackTab() {
@@ -7,15 +8,19 @@ export default function FeedbackTab() {
   const [comments, setComments] = useState("");
   const [sending, setSending] = useState(false);
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setSending(true);
-    setTimeout(() => {
-      setSending(false);
+    try {
+      await api.post("/feedback", { rating, comments });
       setComments("");
       setRating(5);
       toast.success("Feedback submitted! Thank you for rating ConviLarge.");
-    }, 900);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to submit feedback");
+    } finally {
+      setSending(false);
+    }
   }
 
   return (

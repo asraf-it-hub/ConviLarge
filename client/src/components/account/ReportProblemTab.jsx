@@ -1,26 +1,49 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
+import { api } from "../../services/api.js";
 import Button from "../Button.jsx";
 
 export default function ReportProblemTab() {
-  const [form, setForm] = useState({ priority: "medium", description: "", screenshotName: "" });
+  const [priority, setPriority] = useState("medium");
+  const [description, setDescription] = useState("");
+  const [screenshotFile, setScreenshotFile] = useState(null);
   const [reporting, setReporting] = useState(false);
 
   function handleScreenshot(e) {
     const file = e.target.files?.[0];
     if (file) {
-      setForm((prev) => ({ ...prev, screenshotName: file.name }));
+      setScreenshotFile(file);
     }
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    if (!description.trim()) {
+      toast.error("Please describe the problem encountered");
+      return;
+    }
     setReporting(true);
-    setTimeout(() => {
-      setReporting(false);
-      setForm({ priority: "medium", description: "", screenshotName: "" });
+    try {
+      const formData = new FormData();
+      formData.append("priority", priority);
+      formData.append("description", description);
+      if (screenshotFile) {
+        formData.append("file", screenshotFile);
+      }
+
+      await api.post("/report-problem", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      setDescription("");
+      setScreenshotFile(null);
+      setPriority("medium");
       toast.success("Bug report submitted! Our engineering team will review it.");
-    }, 1000);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to submit bug report");
+    } finally {
+      setReporting(false);
+    }
   }
 
   return (
@@ -36,8 +59,8 @@ export default function ReportProblemTab() {
             Priority Level
             <select
               className="focus-ring mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-950 text-slate-900 dark:text-white"
-              value={form.priority}
-              onChange={(e) => setForm((prev) => ({ ...prev, priority: e.target.value }))}
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
             >
               <option value="low">Low (Minor visual issue)</option>
               <option value="medium">Medium (Tool fails but workarounds exist)</option>
@@ -52,12 +75,11 @@ export default function ReportProblemTab() {
               required
               placeholder="What actions were you performing? What was the expected outcome and what actually happened? Include error codes..."
               className="focus-ring mt-2 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm dark:border-slate-700 dark:bg-slate-950 text-slate-900 dark:text-white resize-y"
-              value={form.description}
-              onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
             />
           </label>
 
-          {/* Screenshot upload simulation */}
           <div className="sm:col-span-2 space-y-2">
             <span className="block text-sm font-semibold text-slate-900 dark:text-white">Attach Screenshot (optional)</span>
             <div className="flex items-center gap-3">
@@ -67,7 +89,7 @@ export default function ReportProblemTab() {
                 <input type="file" accept="image/*" className="hidden" onChange={handleScreenshot} />
               </label>
               <span className="text-xs text-slate-400">
-                {form.screenshotName || "No file selected."}
+                {screenshotFile ? screenshotFile.name : "No file selected."}
               </span>
             </div>
           </div>

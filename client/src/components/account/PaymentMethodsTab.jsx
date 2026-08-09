@@ -1,16 +1,27 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import Button from "../Button.jsx";
 
-const INITIAL_CARDS = [
-  { id: "c1", brand: "Visa", last4: "4242", exp: "12/28", isDefault: true },
-  { id: "c2", brand: "Mastercard", last4: "8888", exp: "05/27", isDefault: false }
-];
-
 export default function PaymentMethodsTab() {
-  const [cards, setCards] = useState(INITIAL_CARDS);
+  const [cards, setCards] = useState(() => {
+    try {
+      const saved = localStorage.getItem("convilarge_user_payment_methods");
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [showAdd, setShowAdd] = useState(false);
   const [newCard, setNewCard] = useState({ number: "", exp: "", cvc: "", name: "" });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("convilarge_user_payment_methods", JSON.stringify(cards));
+    } catch (e) {
+      console.error("Failed to save cards to localStorage:", e);
+    }
+  }, [cards]);
 
   function handleSetDefault(cardId) {
     setCards((prev) =>
@@ -130,51 +141,55 @@ export default function PaymentMethodsTab() {
         </form>
       ) : (
         <div className="space-y-4 max-w-xl">
-          {cards.map((c) => (
-            <div
-              key={c.id}
-              className={`flex items-center justify-between p-4 border rounded-xl bg-white dark:bg-slate-900 ${
-                c.isDefault ? "border-slate-300 ring-2 ring-slate-900/5 dark:border-slate-700" : "border-slate-200 dark:border-slate-800"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                {/* Credit card logo mockup */}
-                <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-bold text-xs text-slate-700 dark:text-slate-350">
-                  {c.brand}
+          {cards.length > 0 ? (
+            cards.map((c) => (
+              <div
+                key={c.id}
+                className={`flex items-center justify-between p-4 border rounded-xl bg-white dark:bg-slate-900 ${
+                  c.isDefault ? "border-slate-300 ring-2 ring-slate-900/5 dark:border-slate-700" : "border-slate-200 dark:border-slate-800"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded font-bold text-xs text-slate-700 dark:text-slate-300">
+                    {c.brand}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-slate-900 dark:text-white">
+                      •••• •••• •••• {c.last4}
+                    </h3>
+                    <p className="text-xs text-slate-400">Expires {c.exp}</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-semibold text-slate-900 dark:text-white">
-                    •••• •••• •••• {c.last4}
-                  </h3>
-                  <p className="text-xs text-slate-400">Expires {c.exp}</p>
-                </div>
-              </div>
 
-              <div className="flex items-center gap-3">
-                {c.isDefault ? (
-                  <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
-                    Default
-                  </span>
-                ) : (
+                <div className="flex items-center gap-3">
+                  {c.isDefault ? (
+                    <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                      Default
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleSetDefault(c.id)}
+                      className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                    >
+                      Set Default
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleSetDefault(c.id)}
-                    className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                    onClick={() => handleRemove(c.id, c.brand, c.last4)}
+                    className="text-xs font-semibold text-red-500 hover:underline p-1"
                   >
-                    Set Default
+                    Remove
                   </button>
-                )}
-                <button
-                  onClick={() => handleRemove(c.id, c.brand, c.last4)}
-                  className="text-xs font-semibold text-red-500 hover:underline p-1"
-                >
-                  Remove
-                </button>
+                </div>
               </div>
-            </div>
-          ))}
-          {cards.length === 0 && (
-            <div className="py-8 text-center text-slate-500">
-              No saved payment methods. Click "Add New Card" to get started.
+            ))
+          ) : (
+            <div className="py-12 px-4 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900">
+              <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 mb-3">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+              </div>
+              <h3 className="font-bold text-slate-900 dark:text-white text-base">No Saved Payment Methods</h3>
+              <p className="mt-1 text-sm text-slate-500 max-w-sm mx-auto">Click "Add New Card" above to securely save a payment method for your account.</p>
             </div>
           )}
         </div>
