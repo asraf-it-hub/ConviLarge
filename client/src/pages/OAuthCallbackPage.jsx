@@ -25,7 +25,9 @@ export default function OAuthCallbackPage() {
       return;
     }
 
-    api.post("/auth/social-login", { code, provider: state })
+    const redirectUri = `${window.location.origin}/auth/callback`;
+
+    api.post("/auth/social-login", { code, provider: state, redirectUri })
       .then(({ data }) => {
         handleSocialAuth(data.token, data.user);
         toast.success(`Welcome, ${data.user.name}!`);

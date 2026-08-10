@@ -71,10 +71,12 @@ export async function getConfig(req, res) {
 export async function socialLogin(req, res) {
   if (!dbState.connected) throw new AppError("Accounts need MongoDB. Guest tools are still available.", 503);
   
-  const { code, provider } = req.body;
+  const { code, provider, redirectUri: customRedirectUri } = req.body;
   if (!code || !provider) {
     throw new AppError("Authorization code and provider are required", 400);
   }
+
+  const redirect_uri = customRedirectUri || `${env.clientUrl}/auth/callback`;
 
   let providerId = "";
   let email = "";
@@ -88,7 +90,7 @@ export async function socialLogin(req, res) {
       client_secret: env.googleClientSecret,
       code,
       grant_type: "authorization_code",
-      redirect_uri: `${env.clientUrl}/auth/callback`
+      redirect_uri
     };
 
     const tokenRes = await fetch(tokenUrl, {
@@ -126,7 +128,7 @@ export async function socialLogin(req, res) {
       client_id: env.githubClientId,
       client_secret: env.githubClientSecret,
       code,
-      redirect_uri: `${env.clientUrl}/auth/callback`
+      redirect_uri
     };
 
     const tokenRes = await fetch(tokenUrl, {
