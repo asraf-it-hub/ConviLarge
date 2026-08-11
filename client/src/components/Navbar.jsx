@@ -1,5 +1,5 @@
 import { Link, NavLink } from "react-router-dom";
-import { Menu, Moon, Sun, X } from "lucide-react";
+import { ArrowLeft, Menu, Moon, Sun, X } from "lucide-react";
 import { useState } from "react";
 import Button from "./Button.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
@@ -51,14 +51,27 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-mist/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/75">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link to="/" className="flex items-center gap-3">
-          <img
-            src="/brand/convilarge-icon.webp"
-            alt="ConviLarge"
-            className="h-9 w-9 rounded-lg object-cover shadow-sm ring-1 ring-slate-200 dark:ring-slate-800"
-          />
-          <span className="text-lg font-black text-slate-950 dark:text-white">ConviLarge</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-2.5">
+            <img
+              src="/brand/convilarge-icon.webp"
+              alt="ConviLarge"
+              className="h-8 w-8 rounded-lg object-cover shadow-2xs ring-1 ring-slate-200 dark:ring-slate-800"
+            />
+            <span className="text-base font-black text-slate-950 dark:text-white hidden xs:inline">ConviLarge</span>
+          </Link>
+
+          <div className="hidden h-5 w-px bg-slate-200 dark:bg-slate-800 sm:block" />
+
+          <a
+            href="https://www.collegeprep.page/"
+            className="group inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/90 px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:border-brand-500/40 hover:bg-brand-50/50 hover:text-brand-600 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:border-brand-500/40 dark:hover:bg-brand-950/40 dark:hover:text-brand-300"
+            title="Back to CollegePrep Page"
+          >
+            <ArrowLeft size={14} className="text-brand-500 transition-transform group-hover:-translate-x-1" />
+            <span className="font-extrabold text-xs">CollegePrep</span>
+          </a>
+        </div>
         <nav className="hidden items-center gap-1 lg:flex">{nav}</nav>
         <div className="hidden items-center gap-2 lg:flex">
           <Button variant="ghost" onClick={toggleTheme} aria-label="Toggle theme">
@@ -148,6 +161,13 @@ export default function Navbar() {
       </div>
       {open && (
         <div className="border-t border-slate-200 bg-mist px-4 py-3 dark:border-slate-800 dark:bg-slate-950 lg:hidden">
+          <a
+            href="https://www.collegeprep.page/"
+            className="mb-3 flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white p-2.5 text-xs font-extrabold text-slate-800 shadow-2xs dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
+          >
+            <ArrowLeft size={14} className="text-brand-500" />
+            <span>Back to CollegePrep.page</span>
+          </a>
           <nav className="grid gap-1">{nav}</nav>
           <div className="mt-3 grid grid-cols-2 gap-2">
             <Button variant="soft" onClick={toggleTheme} className="w-full">
