@@ -64,9 +64,9 @@ export default function Navbar() {
           <div className="hidden h-5 w-px bg-slate-200 dark:bg-slate-800 sm:block" />
 
           <a
-            href="https://www.collegeprep.page/"
+            href="https://collegeprep.odoo.com/"
             className="group inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white/90 px-2.5 py-1.5 text-xs font-bold text-slate-700 shadow-2xs transition hover:border-brand-500/40 hover:bg-brand-50/50 hover:text-brand-600 dark:border-slate-800 dark:bg-slate-900/90 dark:text-slate-300 dark:hover:border-brand-500/40 dark:hover:bg-brand-950/40 dark:hover:text-brand-300"
-            title="Back to CollegePrep Page"
+            title="Back to CollegePrep"
           >
             <ArrowLeft size={14} className="text-brand-500 transition-transform group-hover:-translate-x-1" />
             <span className="font-extrabold text-xs">CollegePrep</span>
@@ -162,11 +162,11 @@ export default function Navbar() {
       {open && (
         <div className="border-t border-slate-200 bg-mist px-4 py-3 dark:border-slate-800 dark:bg-slate-950 lg:hidden">
           <a
-            href="https://www.collegeprep.page/"
+            href="https://collegeprep.odoo.com/"
             className="mb-3 flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white p-2.5 text-xs font-extrabold text-slate-800 shadow-2xs dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200"
           >
             <ArrowLeft size={14} className="text-brand-500" />
-            <span>Back to CollegePrep.page</span>
+            <span>Back to CollegePrep</span>
           </a>
           <nav className="grid gap-1">{nav}</nav>
           <div className="mt-3 grid grid-cols-2 gap-2">

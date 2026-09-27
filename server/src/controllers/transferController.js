@@ -11,6 +11,7 @@ import {
 export async function createSecureTransfer(req, res) {
   const transfer = await createTransfer({
     req,
+    clientOrigin: req.body.clientOrigin,
     files: req.files || [],
     expiry: req.body.expiry,
     password: req.body.password,

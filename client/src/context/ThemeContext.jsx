@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 const ThemeContext = createContext(null);
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(() => localStorage.getItem("convilarge_theme") || "light");
+  const [theme, setTheme] = useState(() => localStorage.getItem("convilarge_theme") || "dark");
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");

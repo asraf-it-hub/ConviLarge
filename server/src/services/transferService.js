@@ -52,8 +52,26 @@ function ownerPayload(req) {
   };
 }
 
-function transferUrl(transferId, accessKey) {
-  const base = env.clientUrl.replace(/\/$/, "");
+function resolveClientOrigin(req, customOrigin) {
+  if (customOrigin && typeof customOrigin === "string" && customOrigin.startsWith("http")) {
+    return customOrigin.replace(/\/$/, "");
+  }
+  const origin = req?.get?.("origin") || req?.headers?.origin;
+  if (origin && origin !== "null") return origin.replace(/\/$/, "");
+  const referer = req?.get?.("referer") || req?.headers?.referer;
+  if (referer) {
+    try {
+      const parsed = new URL(referer);
+      return parsed.origin.replace(/\/$/, "");
+    } catch {
+      // ignore
+    }
+  }
+  return (env.clientUrl || "http://localhost:5173").replace(/\/$/, "");
+}
+
+function transferUrl(transferId, accessKey, clientOrigin = "") {
+  const base = (clientOrigin || env.clientUrl || "http://localhost:5173").replace(/\/$/, "");
   return `${base}/transfer/${transferId}?key=${encodeURIComponent(accessKey)}`;
 }
 
@@ -151,7 +169,7 @@ async function uniqueAccessKey() {
   throw new AppError("Could not generate an access key", 500);
 }
 
-export async function createTransfer({ req, files, expiry = "24h", password = "", oneTimeDownload = false, transferType = "file", senderName = "", messageTitle = "", textContent = "", oneTimeView = false }) {
+export async function createTransfer({ req, clientOrigin: customOrigin, files, expiry = "24h", password = "", oneTimeDownload = false, transferType = "file", senderName = "", messageTitle = "", textContent = "", oneTimeView = false }) {
   const isText = transferType === "text";
   if (!isText && !files.length) throw new AppError("Add at least one file to share");
   if (isText && !String(textContent || "").trim()) throw new AppError("Add text content to share");
@@ -159,7 +177,8 @@ export async function createTransfer({ req, files, expiry = "24h", password = ""
 
   const transferId = await uniqueTransferId();
   const accessKey = await uniqueAccessKey();
-  const shareUrl = transferUrl(transferId, accessKey);
+  const clientOrigin = resolveClientOrigin(req, customOrigin);
+  const shareUrl = transferUrl(transferId, accessKey, clientOrigin);
   const qrDataUrl = await QRCode.toDataURL(shareUrl, { margin: 1, width: 320 });
   const now = new Date();
 

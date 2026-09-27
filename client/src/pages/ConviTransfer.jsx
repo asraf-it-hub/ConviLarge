@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { useParams, useSearchParams } from "react-router-dom";
 import jsQR from "jsqr";
+import QRCode from "qrcode";
 import {
   CalendarClock,
   CheckCircle2,
@@ -248,12 +249,25 @@ export default function ConviTransfer() {
     formData.append("password", password);
     formData.append("oneTimeDownload", String(oneTimeDownload));
     formData.append("oneTimeView", String(oneTimeView));
+    formData.append("clientOrigin", window.location.origin);
 
     try {
       const { data } = await api.post("/transfers", formData, {
         headers: { "Content-Type": "multipart/form-data" }
       });
-      setCreatedTransfer(data.transfer);
+      const clientOrigin = window.location.origin;
+      const shareUrl = `${clientOrigin}/transfer/${data.transfer.transferId}?key=${encodeURIComponent(data.transfer.accessKey || "")}`;
+      let qrDataUrl = data.transfer.qrDataUrl;
+      try {
+        qrDataUrl = await QRCode.toDataURL(shareUrl, { margin: 1, width: 320 });
+      } catch (qrErr) {
+        console.warn("Client QR generation fallback to server QR:", qrErr);
+      }
+      setCreatedTransfer({
+        ...data.transfer,
+        shareUrl,
+        qrDataUrl
+      });
       setVerifiedTransfer(null);
       setActiveTransferId(data.transfer.transferId);
       setAccessKey(data.transfer.accessKey);
@@ -417,7 +431,23 @@ export default function ConviTransfer() {
     if (transferId) {
       setMode("receive");
       setActiveTransferId(transferId);
-      setAccessKey(params.get("key") || "");
+      const keyVal = params.get("key") || "";
+      if (keyVal) {
+        setAccessKey(keyVal);
+        setLoading(true);
+        api.post(`/transfers/${transferId}/verify`, { accessKey: keyVal, password: "" })
+          .then(({ data }) => {
+            setVerifiedTransfer(data.transfer);
+            setCreatedTransfer(null);
+            toast.success("Transfer unlocked");
+          })
+          .catch(() => {
+            // Password may be required, or transfer expired
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      }
     }
   }, [transferId, params]);
 
@@ -669,6 +699,12 @@ export default function ConviTransfer() {
                     Download QR Code
                   </Button>
                 </div>
+              </div>
+            )}
+
+            {createdTransfer && (typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")) && (
+              <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2.5 text-xs text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-300">
+                <strong>Local Network Tip:</strong> Because you opened ConviLarge on <code>localhost</code>, your phone cannot connect to your PC's <code>localhost</code>. To test across devices on the same Wi-Fi, open ConviLarge on your computer using your Wi-Fi IP address instead of <code>localhost</code>. Once deployed to your live domain, QR codes work anywhere worldwide!
               </div>
             )}
 
