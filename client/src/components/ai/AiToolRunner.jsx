@@ -560,11 +560,23 @@ export default function AiToolRunner({ tool }) {
     setStage("uploading");
     setProgress(stages.uploading.value);
 
+    // Some browser/proxy combinations do not expose upload progress events (or
+    // their total size). Move past the upload label while the request is still
+    // active so a long AI extraction/provider call is not shown as "Uploading".
+    const uploadStageFallback = window.setTimeout(() => {
+      setStage((current) => current === "uploading" ? "extracting" : current);
+      setProgress((current) => current === stages.uploading.value ? stages.extracting.value : current);
+    }, 1500);
+
     try {
       const { data } = await api.post("/ai/run", form, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (event) => {
-          if (!event.total) return;
+          if (!event.total) {
+            setStage((current) => current === "uploading" ? "extracting" : current);
+            setProgress((current) => current === stages.uploading.value ? stages.extracting.value : current);
+            return;
+          }
           const uploaded = Math.round((event.loaded / event.total) * 100);
           setStage(uploaded >= 100 ? "extracting" : "uploading");
           setProgress(Math.min(stages.extracting.value, 12 + Math.round(uploaded * 0.36)));
@@ -588,6 +600,7 @@ export default function AiToolRunner({ tool }) {
       setStage("idle");
       setProgress(0);
     } finally {
+      window.clearTimeout(uploadStageFallback);
       setBusy(false);
     }
   }

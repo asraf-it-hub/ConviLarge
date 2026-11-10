@@ -128,6 +128,14 @@ export default function ToolRunner({ tool }) {
     setJob(null);
     setErrorMessage("");
 
+    // Upload progress is not available in every browser/proxy. Advance the
+    // display while the processing request remains active instead of leaving
+    // the tool stuck on "Uploading".
+    const uploadStageFallback = window.setTimeout(() => {
+      setStage((current) => current === "uploading" ? "processing" : current);
+      setProgress((current) => current === progressStages.uploading.value ? progressStages.processing.value : current);
+    }, 1500);
+
     const form = new FormData();
     form.append("toolType", tool.id);
     form.append("level", level);
@@ -158,11 +166,14 @@ export default function ToolRunner({ tool }) {
       const { data } = await api.post("/tools/run", form, {
         headers: { "Content-Type": "multipart/form-data" },
         onUploadProgress: (event) => {
-          if (event.total) {
-            const uploaded = Math.round((event.loaded / event.total) * 100);
-            setStage(uploaded >= 100 ? "processing" : "uploading");
-            setProgress(Math.min(progressStages.processing.value, 12 + Math.round(uploaded * 0.48)));
+          if (!event.total) {
+            setStage((current) => current === "uploading" ? "processing" : current);
+            setProgress((current) => current === progressStages.uploading.value ? progressStages.processing.value : current);
+            return;
           }
+          const uploaded = Math.round((event.loaded / event.total) * 100);
+          setStage(uploaded >= 100 ? "processing" : "uploading");
+          setProgress(Math.min(progressStages.processing.value, 12 + Math.round(uploaded * 0.48)));
         }
       });
       setStage("saving");
@@ -178,6 +189,7 @@ export default function ToolRunner({ tool }) {
       setProgress(0);
       setStage("idle");
     } finally {
+      window.clearTimeout(uploadStageFallback);
       setBusy(false);
     }
   }
