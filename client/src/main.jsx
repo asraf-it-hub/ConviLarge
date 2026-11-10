@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { Analytics } from "@vercel/analytics/react";
 import "./index.css";
 import { AuthProvider } from "./context/AuthContext.jsx";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
@@ -116,6 +117,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Routes>
+          <Analytics />
         </BrowserRouter>
       </AuthProvider>
     </ThemeProvider>
